@@ -1,22 +1,29 @@
 # Handoff
 
-更新时间：2026-10-14（二轮 review 后）
+更新时间：2026-10-14
 
 ## 当前状态
 
-治理架构重整完成并经全仓 review 修正：agent-governance.md 为纯文档工程指南，templates/standards.md 是可复制标准真源，本仓自身以指向式 docs/STANDARDS.md 承接（真源仓库形态，不复制避免双写）。review 修复：验收清单重复段、readme 模板完整配置缺 STANDARDS、agents 模板失效路径引用、governance 与 standards 核心原则逐字重复、LESSONS 未入小型推荐列。
+本轮优化通用治理规范：DESIGN 明确为视觉规范，架构单独维护；稳定文档按契约变化更新，当前工作集中到 HANDOFF 和 LESSONS。标准由真源维护，目标项目采用固定版本副本，项目和模块补充约束独立维护。mono-repo 的规则继承、事实所有者和验证范围已加入指南与模板。
+
+模板仍是可选工具，不要求项目复制整套目录。README 模板已改为可实例化的项目入口。本仓 README、原则模型、研究原文和知识库 Skill 未改动。
 
 ## 下一步
 
-- 在下一个真实项目中走完整流程：读指南 → 复制三件套（agents/standards/readme）→ 验证新项目的 agent 能凭文档开工
-- 归因收尾：Claude Code 的 Chrome/computer-use 能力取决于 claude.ai Pro/Max 认证（当前会话走第三方 provider）——是否配双账号由人决定
+在 `obsidian_labs` 验证一次真实适配：先明确当前契约和文档所有者，再收敛入口与验证。Echo 现有能力保留，通用能力层等待真实复用需求。该仓本轮未修改，适配按该项目的任务授权执行。
+
+目标项目采用标准时，来源必须是经确认的已提交版本；未提交的正文不能冒充某个 commit 的副本。重点验证新 Agent 能确定范围、按需读取、执行检查，并区分实现与验收。
+
+## 已知范围
+
+当前只完成治理文档与模板优化；新建项目、既有标准差异归位、标准升级与回退、mono-repo 实际接手仍需在消费项目验证。
+
+本机浏览器运行时与认证差异是宿主问题。使用前检查真实配置，不将旧版本号、会话认证或本机解释器路径固化为通用要求。
 
 ## 关键文件
 
-- `AGENTS.md` — 项目入口、架构约束、工具选择梯度、浏览器使用规范
-- `docs/governance/agent-governance.md` — 文档工程指南 + 真源/投影架构
-- `docs/governance/templates/standards.md` — 通用工作标准真源；`docs/STANDARDS.md` — 本仓指向式承接
-- `docs/LESSONS.md` — 失败记录和规则演化（晋升出口：standards 真源）
-- `docs/governance/templates/` — 10 个模板
-- `docs/research/` — 研究文档；`thirdparty/magpie/` — magpie 源码快照（gitignore）
-- `tracks/knowledge-base/SKILL.md` — 知识库 Skill；`~/.claude/skills/knowledge-base/` 是它的安装副本，改完需重新复制
+- [文档工程指南](governance/agent-governance.md)：职责、更新条件、标准采用和 mono-repo 适配。
+- [标准真源](governance/templates/standards.md)：执行、测试证据与验证范围。
+- [本仓承接](STANDARDS.md)：只路由到真源。
+- [模板](governance/templates/)：按需要实例化。
+- [LESSONS](LESSONS.md)：失败证据、审议与规则反馈。
