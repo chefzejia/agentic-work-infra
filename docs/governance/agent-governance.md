@@ -45,9 +45,12 @@ agentic-work-infra
 | `docs/HANDOFF.md` | 当前在哪里，下一步做什么 | 优先级、阻塞或接手动作改变 | [handoff.md](templates/handoff.md) |
 | `docs/LESSONS.md` | 失败说明了什么，规则是否需要改 | 有新的失败证据或审议结论 | [lessons.md](templates/lessons.md) |
 | `docs/DEPLOYMENT.md` | 如何生效、核验和回退 | 部署流程或验收要求改变 | [deployment.md](templates/deployment.md) |
+| `docs/COMMUNITY.md` | Agent 如何审查社区 PR/Issue | Agent 管理开源社区的安全和质量协议 | [community.md](templates/community.md) |
 | `docs/architecture/adr/` | 为什么接受某个架构决策 | 新决策形成；旧决策被取代时标明关系 | [adr.md](templates/adr.md) |
 
 独立项目或需要单独接手的仓库需要 README、AGENTS 和采用的标准。mono-repo 的模块、Skill 和 track 默认继承父级入口与标准，只在有独立契约、生命周期或接手节奏时添加自己的文件。其余文档按决策需要添加，不建空目录。架构文档：小项目用 `docs/ARCHITECTURE.md` 单文件，大项目升级为 `docs/architecture/` 目录管理。DESIGN 只承担视觉规范。部署文档必须唯一：统一到 `docs/DEPLOYMENT.md`，项目已有其他部署文档时对齐到此规范。
+
+**COMMUNITY.md 可选**：适用于 Agent 审查和合并社区 PR/Issue 的开源项目。定义安全检查、关闭条件、作者管理协议。支持 GitHub、GitLab、Gitea 等平台。纯人工审查或私有项目不需要。
 
 稳定文档按契约变化更新，不按周、不按每次代码修改更新。README 不放当前阶段、测试数量、待办或部署哈希；它提供稳定命令入口，命令实现归脚本和配置维护。架构文档以模块边界和公共接口为锚点，不抄录容易变化的私有实现。
 
