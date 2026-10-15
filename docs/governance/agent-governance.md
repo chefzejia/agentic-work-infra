@@ -82,6 +82,38 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 
 验证范围遵循标准的 [验证要求](templates/standards.md#验证)：覆盖改变的模块及受影响消费者，公共配置、影响不清或正式发布时扩大范围。局部检查与仓库完整检查各有明确入口，CI 调用相同入口，不另写一套规则。
 
+## 多 Agent 协作项目的文档组织
+
+采用多 Agent 协作模式的大型项目需要实例化以下文档：
+
+```text
+目标项目/
+├── AGENTS.md              ← 项目入口，声明采用多 Agent 协作
+├── ROLES.md               ← 定义具体角色和会话名
+├── HANDOFF.md             ← Architect 维护，当前状态和任务分配
+├── STANDARDS.md           ← 从 agentic-work-infra 复制的执行约束
+├── LESSONS.md             ← 失败经验，审议后晋升到规则
+└── docs/
+    └── architecture/      ← 架构决策记录（按需）
+```
+
+**AGENTS.md** 声明协作模式：
+```markdown
+## 协作模式
+本项目采用多 Agent 协作模式，角色定义见 [ROLES.md](ROLES.md)
+
+## 优先读取
+1. [角色定义](ROLES.md)
+2. [通用工作标准](STANDARDS.md)
+3. [当前状态](HANDOFF.md)
+```
+
+**ROLES.md** 从 [角色模板](templates/roles.md) 实例化，定义当前活跃的角色和会话名。
+
+详细的协作架构、角色职责、接口约定和升级路径见 [多 Agent 协作架构](multi-agent-collab.md)。
+
+项目规模小（< 5 文件，< 3 天）时使用单 Agent 模式，不需要 ROLES.md。中型项目（几个模块，1-2 周）可以简化为双 Agent 模式，在 AGENTS.md 中简单说明即可。
+
 ## 规则如何演化
 
 LESSONS 记录候选规则、具体证据和适用范围。相同问题重复出现三次触发审议，晋升仍需判断根因、严重程度、反例和维护成本；单次严重问题也可以触发审议。
