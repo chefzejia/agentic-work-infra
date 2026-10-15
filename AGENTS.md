@@ -16,11 +16,11 @@
 
 ## 架构约束
 
-1. **共同可观测**：人和 Agent 面对同一个工作状态，不分别维护两套。
+1. **共同可观测**：人和 Agent 面对同一个工作状态，每类事实只在一处维护。
 2. **授权边界**：Agent 只修改明确授权的范围，不能静默覆盖原始材料。
 3. **显式不确定**：未知、冲突和待确认必须保持显式，不能伪装成确定。
-4. **当前与长期分离**：当前任务可以引用长期知识和规则，但不能把任务变量自动写回长期层。
-5. **单一主线**：辅助索引、缓存和生成结果可重建，不能成为第二套工作状态。
+4. **当前与长期分离**：当前任务可以引用长期知识和规则，但不能把任务变量自动写入长期状态。
+5. **单一主线**：辅助索引、缓存和生成结果可重建，不能独立维护事实。
 
 ## 修改和验证
 
@@ -43,7 +43,7 @@ git diff --check
 
 - [人机协同模型](docs/core/agentic-work-model.md)：原则与推导。
 - [文档工程指南](docs/governance/agent-governance.md)：职责、更新条件、标准分发和 mono-repo 适配。
-- [通用标准真源](docs/governance/templates/standards.md)：标准正文唯一修改位置；本仓 `docs/STANDARDS.md` 只做路由。
+- [通用标准权威版本](docs/governance/templates/standards.md)：标准正文唯一修改位置；本仓 `docs/STANDARDS.md` 只做路由。
 - [模板](docs/governance/templates/)：按实际需要实例化，不批量创建空文档。
 - [LESSONS](docs/LESSONS.md)：失败证据与候选规则，审议后更新对应规则所有者。
 - [知识库 Skill](tracks/knowledge-base/SKILL.md)：协同模型在知识工作中的应用。
