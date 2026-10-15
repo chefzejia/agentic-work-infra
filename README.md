@@ -13,7 +13,7 @@
 1. [项目入口](AGENTS.md) — 如何使用本仓、如何修改本仓
 2. [人机协同模型](docs/core/agentic-work-model.md) — 原则和推导
 3. [文档工程指南](docs/governance/agent-governance.md) — 改造项目治理
-4. [多 Agent 协作](docs/governance/multi-agent-collab.md) — 大型项目协作架构
+4. [多 Agent 协作](docs/governance/templates/roles.md) — 大型项目协作架构
 5. [知识库 Skill](tracks/knowledge-base/SKILL.md) — 在知识整理中验证协同
 
 [Apache License 2.0](LICENSE)

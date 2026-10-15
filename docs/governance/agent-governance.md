@@ -108,9 +108,7 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 3. [当前状态](HANDOFF.md)
 ```
 
-**ROLES.md** 从 [角色模板](templates/roles.md) 实例化，定义当前活跃的角色和会话名。
-
-详细的协作架构、角色职责、接口约定和升级路径见 [多 Agent 协作架构](multi-agent-collab.md)。
+**ROLES.md** 从 [角色模板](templates/roles.md) 实例化，定义当前活跃的角色和会话名。角色模板同时包含协作架构设计原理和实例化说明。
 
 项目规模小（< 5 文件，< 3 天）时使用单 Agent 模式，不需要 ROLES.md。中型项目（几个模块，1-2 周）可以简化为双 Agent 模式，在 AGENTS.md 中简单说明即可。
 

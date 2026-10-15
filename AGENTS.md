@@ -6,7 +6,7 @@
 
 **建立项目治理**：读 [agent-governance.md](docs/governance/agent-governance.md) 和 [templates/](docs/governance/templates/)
 
-**建立多 Agent 协作**：读 [multi-agent-collab.md](docs/governance/multi-agent-collab.md)
+**建立多 Agent 协作**：读 [templates/roles.md](docs/governance/templates/roles.md)
 
 **应用到具体场景**（知识库、投标等）：读 [tracks/](tracks/)
 
