@@ -46,7 +46,6 @@ agentic-work-infra
 | `docs/LESSONS.md` | 失败说明了什么，规则是否需要改 | 有新的失败证据或审议结论 | [lessons.md](templates/lessons.md) |
 | `docs/DEPLOYMENT.md` | 如何生效、核验和回退 | 部署流程或验收要求改变 | [deployment.md](templates/deployment.md) |
 | `docs/architecture/adr/` | 为什么接受某个架构决策 | 新决策形成；旧决策被取代时标明关系 | [adr.md](templates/adr.md) |
-| `docs/operations/` | 如何执行一次危险操作 | 本次操作范围与恢复步骤确定 | [operation.md](templates/operation.md) |
 
 独立项目或需要单独接手的仓库需要 README、AGENTS 和采用的标准。mono-repo 的模块、Skill 和 track 默认继承父级入口与标准，只在有独立契约、生命周期或接手节奏时添加自己的文件。其余文档按决策需要添加，不建空目录。架构文档：小项目用 `docs/ARCHITECTURE.md` 单文件，大项目升级为 `docs/architecture/` 目录管理。DESIGN 只承担视觉规范。部署文档必须唯一：统一到 `docs/DEPLOYMENT.md`，项目已有其他部署文档时对齐到此规范。
 
