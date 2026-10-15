@@ -90,9 +90,9 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 - `AGENTS.md` — 项目入口，声明协作模式和读取路径
 - `docs/STANDARDS.md` — 从 agentic-work-infra 复制的执行约束
 
-**三层协作额外需要**：
-- `docs/ROLES.md` — 定义 Architect/Worker/Reviewer 角色和会话名
-- `docs/HANDOFF.md` — Architect 维护当前状态和任务分配
+**三角色协作额外需要**：
+- `docs/ROLES.md` — 定义 Brain/Worker/Tester 角色和会话名
+- `docs/HANDOFF.md` — Brain 维护当前状态和任务分配
 
 **按需添加**（所有模式）：
 - `docs/LESSONS.md` — 失败经验，审议后晋升到规则
@@ -100,20 +100,16 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 - `docs/DESIGN.md` — 视觉规范（前端项目）
 - `docs/DEPLOYMENT.md` — 部署规范（需要部署的项目）
 
-三层协作项目的 AGENTS.md 示例：
+AGENTS.md 示例：
 ```markdown
 ## 协作模式
-本项目采用三层协作模式，角色定义见 [docs/ROLES.md](docs/ROLES.md)
+本项目采用三角色协作模式，角色定义见 [docs/ROLES.md](docs/ROLES.md)
 
 ## 优先读取
 1. [角色定义](docs/ROLES.md)
 2. [通用工作标准](docs/STANDARDS.md)
 3. [当前状态](docs/HANDOFF.md)
 ```
-
-双 Agent 项目可以在 AGENTS.md 中简单说明 Architect/Worker 分工，不需要独立的 ROLES.md 和 HANDOFF.md。
-
-单 Agent 项目只需要 AGENTS.md 指向 docs/STANDARDS.md 即可。
 
 ## 规则如何演化
 
