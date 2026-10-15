@@ -38,6 +38,6 @@
 - `AGENTS.md`：Agent 的边界和路由。
 - `docs/STANDARDS.md`：项目采用的通用执行标准。
 - `docs/HANDOFF.md`：当前工作和下一步，有交接需要时保留。
-- `<架构文档路径>`：模块职责与接口，有独立架构契约时保留。
-- `DESIGN.md`：视觉规范，有视觉输出时保留。
-- `<部署文档路径>`：生效、核验与回退，有部署动作时保留。
+- `<架构文档路径>`：模块职责与接口，有独立架构契约时保留（如 docs/ARCHITECTURE.md 或 docs/architecture/）。
+- `docs/DESIGN.md`：视觉规范，有视觉输出时保留。
+- `docs/DEPLOYMENT.md`：生效、核验与回退，有部署动作时保留。

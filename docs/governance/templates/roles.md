@@ -1,7 +1,7 @@
 # 多 Agent 协作
 
 <!-- 本文件是角色定义模板 + 协作架构设计说明。
-供多 Agent 协作项目实例化：复制到目标项目为 ROLES.md，
+供多 Agent 协作项目实例化：复制到目标项目为 docs/ROLES.md，
 删除设计说明部分（"## 设计原理"之后的内容），保留模板部分并填写具体信息。
 来源：agentic-work-infra/docs/governance/templates/roles.md
 -->
@@ -34,7 +34,7 @@
 - **职责**：
   - 理解业务目标、做架构决策
   - 制定模块边界、接口契约、交接计划
-  - 维护 HANDOFF.md（当前状态、下一步、阻塞）
+  - 维护 docs/HANDOFF.md（当前状态、下一步、阻塞）
   - 制定任务包，分发给 Worker
   - 处理 Reviewer 升级的架构问题
 - **只保留上下文**：目标、边界、当前状态、关键决策
@@ -88,7 +88,7 @@ Worker → Reviewer → Architect → 人
 
 ### 接口约定
 
-**任务包格式**（Architect → Worker）见 HANDOFF.md 或任务 issue，必须包含：
+**任务包格式**（Architect → Worker）见 docs/HANDOFF.md 或任务 issue，必须包含：
 - 范围（文件、接口、依赖）
 - 契约（输入、输出、错误处理、性能）
 - 验收标准（测试覆盖、安全检查）
@@ -100,7 +100,7 @@ Worker → Reviewer → Architect → 人
 - 建议改进（非阻塞）
 - 需要 Architect 裁定（架构问题）
 
-**状态交接格式**（Architect 维护 HANDOFF.md）必须包含：
+**状态交接格式**（Architect 维护 docs/HANDOFF.md）必须包含：
 - 当前状态（各模块进展）
 - 下一步（任务分配）
 - 阻塞（等待什么）
@@ -129,7 +129,7 @@ Worker → Reviewer → Architect → 人
 **只记录决策，不记录实现**：
 
 ```markdown
-# HANDOFF.md（Architect 维护）
+# docs/HANDOFF.md（Architect 维护）
 ## 当前状态
 模块 A：接口已定义，等待实现
 模块 B：实现完成，已通过审查，待合并
@@ -201,7 +201,7 @@ Worker → Reviewer → Architect → 人
 A: **纪律：永远不看具体代码**。只看：
 - Reviewer 的审查摘要
 - Git log 的提交信息
-- HANDOFF.md 的状态更新
+- docs/HANDOFF.md 的状态更新
 
 需要细节时，问 Reviewer 或 Worker，让他们提炼摘要。
 
@@ -213,7 +213,7 @@ A: **任务包必须明确"不在范围内"**。不清楚时停下来问 Archite
 
 A: 三个来源：
 1. 任务包中的契约和验收标准
-2. 项目 STANDARDS.md
+2. 项目 docs/STANDARDS.md
 3. Reviewer 自己的代码质量判断
 
 **Q: 多个 Worker 如何协调？**
@@ -247,21 +247,22 @@ A: 当：
 ```text
 目标项目/
 ├── AGENTS.md              ← 项目入口，声明采用多 Agent 协作
-├── ROLES.md               ← 从本模板实例化，定义具体角色和会话名
-├── HANDOFF.md             ← Architect 维护，当前状态和任务分配
-├── STANDARDS.md           ← 从 agentic-work-infra 复制的执行约束
-├── LESSONS.md             ← 失败经验，审议后晋升到规则
 └── docs/
-    └── architecture/      ← 架构决策记录（按需）
+    ├── ROLES.md           ← 从本模板实例化，定义具体角色和会话名
+    ├── HANDOFF.md         ← Architect 维护，当前状态和任务分配
+    ├── STANDARDS.md       ← 从 agentic-work-infra 复制的执行约束
+    ├── LESSONS.md         ← 失败经验，审议后晋升到规则（按需）
+    ├── ARCHITECTURE.md    ← 架构文档，单文件（按需）
+    └── architecture/      ← 架构文档，目录管理（大项目按需）
 ```
 
 **AGENTS.md** 声明协作模式：
 ```markdown
 ## 协作模式
-本项目采用多 Agent 协作模式，角色定义见 [ROLES.md](ROLES.md)
+本项目采用多 Agent 协作模式，角色定义见 [docs/ROLES.md](docs/ROLES.md)
 
 ## 优先读取
-1. [角色定义](ROLES.md)
-2. [通用工作标准](STANDARDS.md)
-3. [当前状态](HANDOFF.md)
+1. [角色定义](docs/ROLES.md)
+2. [通用工作标准](docs/STANDARDS.md)
+3. [当前状态](docs/HANDOFF.md)
 ```

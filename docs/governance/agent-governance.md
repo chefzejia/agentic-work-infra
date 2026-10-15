@@ -40,15 +40,15 @@ agentic-work-infra
 | `README.md` | 项目是什么，如何开始 | 定位、安装方式或公开命令改变 | [readme.md](templates/readme.md) |
 | `AGENTS.md` | Agent 的范围和读取入口 | 稳定边界、适用规则或路由改变 | [agents.md](templates/agents.md) |
 | `docs/STANDARDS.md` | 通用执行约束 | 显式采用经审议的新版本 | [standards.md](templates/standards.md) |
-| `ARCHITECTURE.md` 或 `docs/architecture/overview.md` | 职责、依赖、接口、数据所有权 | 文档化的架构契约改变 | [architecture.md](templates/architecture.md) |
-| `DESIGN.md` | 视觉语言和组件样式 | 品牌、排版或视觉规范改变 | [design.md](templates/design.md) |
+| `docs/ARCHITECTURE.md` 或 `docs/architecture/` | 职责、依赖、接口、数据所有权 | 文档化的架构契约改变 | [architecture.md](templates/architecture.md) |
+| `docs/DESIGN.md` | 视觉语言和组件样式 | 品牌、排版或视觉规范改变 | [design.md](templates/design.md) |
 | `docs/HANDOFF.md` | 当前在哪里，下一步做什么 | 优先级、阻塞或接手动作改变 | [handoff.md](templates/handoff.md) |
 | `docs/LESSONS.md` | 失败说明了什么，规则是否需要改 | 有新的失败证据或审议结论 | [lessons.md](templates/lessons.md) |
-| `DEPLOYMENT.md` 或已有唯一部署文档 | 如何生效、核验和回退 | 部署流程或验收要求改变 | [deployment.md](templates/deployment.md) |
+| `docs/DEPLOYMENT.md` | 如何生效、核验和回退 | 部署流程或验收要求改变 | [deployment.md](templates/deployment.md) |
 | `docs/architecture/adr/` | 为什么接受某个架构决策 | 新决策形成；旧决策被取代时标明关系 | [adr.md](templates/adr.md) |
 | `docs/operations/` | 如何执行一次危险操作 | 本次操作范围与恢复步骤确定 | [operation.md](templates/operation.md) |
 
-独立项目或需要单独接手的仓库需要 README、AGENTS 和采用的标准。mono-repo 的模块、Skill 和 track 默认继承父级入口与标准，只在有独立契约、生命周期或接手节奏时添加自己的文件。其余文档按决策需要添加，不建空目录。架构有自己的文档，DESIGN 只承担视觉规范。
+独立项目或需要单独接手的仓库需要 README、AGENTS 和采用的标准。mono-repo 的模块、Skill 和 track 默认继承父级入口与标准，只在有独立契约、生命周期或接手节奏时添加自己的文件。其余文档按决策需要添加，不建空目录。架构文档：小项目用 `docs/ARCHITECTURE.md` 单文件，大项目升级为 `docs/architecture/` 目录管理。DESIGN 只承担视觉规范。部署文档必须唯一：统一到 `docs/DEPLOYMENT.md`，项目已有其他部署文档时对齐到此规范。
 
 稳定文档按契约变化更新，不按周、不按每次代码修改更新。README 不放当前阶段、测试数量、待办或部署哈希；它提供稳定命令入口，命令实现归脚本和配置维护。架构文档以模块边界和公共接口为锚点，不抄录容易变化的私有实现。
 
@@ -59,9 +59,9 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 根 `AGENTS.md` 是 Agent 的进入入口，记录项目定位、稳定边界、验证入口和按任务读取的文件。一般控制在 50 行左右，复杂项目不超过 100 行；先消除重复职责，再考虑拆分。
 
 - 开始任务：入口 → 采用的标准 → 当前工作 → 相关模块契约。
-- 调整视觉：读取 DESIGN。
+- 调整视觉：读取 docs/DESIGN.md。
 - 修改接口、数据或职责：读取对应架构或协议文档。
-- 部署：读取唯一部署文档。
+- 部署：读取 docs/DEPLOYMENT.md。
 - 临时授权和本次任务变量：来自人的任务指令，不固化进稳定入口。
 
 验证命令的实际定义归脚本或配置。README 解释稳定用法，AGENTS 指向任务所需验证入口。命令内部改变而公开入口不变时，无需重写入口文档。
@@ -86,30 +86,32 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 
 **所有项目的基础文档**：
 - `AGENTS.md` — 项目入口，声明协作模式和读取路径
-- `STANDARDS.md` — 从 agentic-work-infra 复制的执行约束
+- `docs/STANDARDS.md` — 从 agentic-work-infra 复制的执行约束
 
 **三层协作额外需要**：
-- `ROLES.md` — 定义 Architect/Worker/Reviewer 角色和会话名
-- `HANDOFF.md` — Architect 维护当前状态和任务分配
+- `docs/ROLES.md` — 定义 Architect/Worker/Reviewer 角色和会话名
+- `docs/HANDOFF.md` — Architect 维护当前状态和任务分配
 
 **按需添加**（所有模式）：
-- `LESSONS.md` — 失败经验，审议后晋升到规则
-- `docs/architecture/` — 架构决策记录
+- `docs/LESSONS.md` — 失败经验，审议后晋升到规则
+- `docs/ARCHITECTURE.md` 或 `docs/architecture/` — 架构文档（小项目单文件，大项目目录管理）
+- `docs/DESIGN.md` — 视觉规范（前端项目）
+- `docs/DEPLOYMENT.md` — 部署规范（需要部署的项目）
 
 三层协作项目的 AGENTS.md 示例：
 ```markdown
 ## 协作模式
-本项目采用三层协作模式，角色定义见 [ROLES.md](ROLES.md)
+本项目采用三层协作模式，角色定义见 [docs/ROLES.md](docs/ROLES.md)
 
 ## 优先读取
-1. [角色定义](ROLES.md)
-2. [通用工作标准](STANDARDS.md)
-3. [当前状态](HANDOFF.md)
+1. [角色定义](docs/ROLES.md)
+2. [通用工作标准](docs/STANDARDS.md)
+3. [当前状态](docs/HANDOFF.md)
 ```
 
 双 Agent 项目可以在 AGENTS.md 中简单说明 Architect/Worker 分工，不需要独立的 ROLES.md 和 HANDOFF.md。
 
-单 Agent 项目只需要 AGENTS.md 指向 STANDARDS.md 即可。
+单 Agent 项目只需要 AGENTS.md 指向 docs/STANDARDS.md 即可。
 
 ## 规则如何演化
 
