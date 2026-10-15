@@ -84,23 +84,22 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 
 ## 多 Agent 协作项目的文档组织
 
-采用多 Agent 协作模式的项目需要实例化以下文档：
+**所有项目的基础文档**：
+- `AGENTS.md` — 项目入口，声明协作模式和读取路径
+- `STANDARDS.md` — 从 agentic-work-infra 复制的执行约束
 
-```text
-目标项目/
-├── AGENTS.md              ← 项目入口，声明采用多 Agent 协作
-├── ROLES.md               ← 定义具体角色和会话名
-├── HANDOFF.md             ← Architect 维护，当前状态和任务分配
-├── STANDARDS.md           ← 从 agentic-work-infra 复制的执行约束
-├── LESSONS.md             ← 失败经验，审议后晋升到规则
-└── docs/
-    └── architecture/      ← 架构决策记录（按需）
-```
+**三层协作额外需要**：
+- `ROLES.md` — 定义 Architect/Worker/Reviewer 角色和会话名
+- `HANDOFF.md` — Architect 维护当前状态和任务分配
 
-**AGENTS.md** 声明协作模式：
+**按需添加**（所有模式）：
+- `LESSONS.md` — 失败经验，审议后晋升到规则
+- `docs/architecture/` — 架构决策记录
+
+三层协作项目的 AGENTS.md 示例：
 ```markdown
 ## 协作模式
-本项目采用多 Agent 协作模式，角色定义见 [ROLES.md](ROLES.md)
+本项目采用三层协作模式，角色定义见 [ROLES.md](ROLES.md)
 
 ## 优先读取
 1. [角色定义](ROLES.md)
@@ -108,9 +107,9 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 3. [当前状态](HANDOFF.md)
 ```
 
-**ROLES.md** 从 [角色模板](templates/roles.md) 实例化，定义当前活跃的角色和会话名。角色模板同时包含协作架构设计原理和实例化说明。
+双 Agent 项目可以在 AGENTS.md 中简单说明 Architect/Worker 分工，不需要独立的 ROLES.md 和 HANDOFF.md。
 
-协作模式按实际复杂度选择：人能一次对话完成决策+实现+验证的闭环用单 Agent，不需要 ROLES.md；需要先定边界再执行的可以简化为双 Agent，在 AGENTS.md 中简单说明即可；需要并行推进或人无法详细审查所有实现的才需要三层协作（Architect + Worker(s) + Reviewer）。
+单 Agent 项目只需要 AGENTS.md 指向 STANDARDS.md 即可。
 
 ## 规则如何演化
 
