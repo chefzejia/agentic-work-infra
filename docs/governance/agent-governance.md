@@ -84,7 +84,7 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 
 ## 多 Agent 协作项目的文档组织
 
-采用多 Agent 协作模式的大型项目需要实例化以下文档：
+采用多 Agent 协作模式的项目需要实例化以下文档：
 
 ```text
 目标项目/
@@ -110,7 +110,7 @@ HANDOFF 和 LESSONS 承担需要持续维护的状态。HANDOFF 在交接条件�
 
 **ROLES.md** 从 [角色模板](templates/roles.md) 实例化，定义当前活跃的角色和会话名。角色模板同时包含协作架构设计原理和实例化说明。
 
-项目规模小（< 5 文件，< 3 天）时使用单 Agent 模式，不需要 ROLES.md。中型项目（几个模块，1-2 周）可以简化为双 Agent 模式，在 AGENTS.md 中简单说明即可。
+协作模式按实际复杂度选择：人能一次对话完成决策+实现+验证的闭环用单 Agent，不需要 ROLES.md；需要先定边界再执行的可以简化为双 Agent，在 AGENTS.md 中简单说明即可；需要并行推进或人无法详细审查所有实现的才需要三层协作（Architect + Worker(s) + Reviewer）。
 
 ## 规则如何演化
 
