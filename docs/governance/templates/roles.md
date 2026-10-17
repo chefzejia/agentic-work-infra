@@ -10,6 +10,20 @@
 
 本项目启用三角色协作。当前活跃角色：
 
+## Orca 编排绑定
+
+本文定义 Brain、Worker 和 Tester 的职责；Agent 通过 Orca 运行时的生命周期协议，以当前安装版本的 orchestration skill 为准。需要监督、等待或协调任务时，Brain 先读取当前协议：
+
+```bash
+orca skills get orchestration
+```
+
+- Brain 是 Orca Coordinator。创建 Worker 或 Tester 的标准路径是 `orca orchestration worker-start`，不要把普通 New Terminal 或 `orca worktree create --agent` 当作 supervised worker。
+- Worker 和 Tester 必须作为 Orca Dispatch 启动，才能收到包含 Task ID、Dispatch ID、终端句柄和生命周期命令的注入 preamble。Agent 必须使用 preamble 中的精确值，不自行重建 ID 或句柄。
+- Worker 按 preamble 执行任务、发送心跳、处理 Brain 的追问，并且只发送一次 `worker_done`；Tester 也使用新的 Dispatch，不由 Worker 自验。
+- Brain 等待并处理 `worker_done`、`question` 和 `escalation`，处理整批消息后再 ACK，并对已结算 Dispatch 明确执行 release、retain 或 reuse。
+- Orca 协议不替代本项目的任务包、验收标准、权限边界和合并规则；这些仍由项目文档定义。合并、部署和其他不可逆操作仍由人批准。
+
 ### Brain（协调者 + 架构师）
 
 - **会话名**：`<填写会话名，如 brain>`
