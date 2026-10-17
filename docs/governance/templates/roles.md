@@ -24,6 +24,15 @@ orca skills get orchestration
 - Brain 等待并处理 `worker_done`、`question` 和 `escalation`，处理整批消息后再 ACK，并对已结算 Dispatch 明确执行 release、retain 或 reuse。
 - Orca 协议不替代本项目的任务包、验收标准、权限边界和合并规则；这些仍由项目文档定义。合并、部署和其他不可逆操作仍由人批准。
 
+### Provider 与模型不变量
+
+- Brain：Claude Code + `opus-5.5`。
+- Worker：Codex + `gpt-6.1-sol`，reasoning effort `xhigh`。
+- Tester：Codex + `gpt-6.1-sol`，reasoning effort `xhigh`。
+- Provider、模型和 effort 是角色契约的一部分。启动失败、hook 阻塞、`agent_readiness` 超时或账户不可用时，不得自动切换 Provider、模型、普通 Terminal 或降低 effort。
+- `worker-start` 返回后，Brain 必须检查 `worker.launch.effective.agent`、`worker.launch.effective.model` 和有效 effort；任何一项不符合都必须停止当前编排并报告，等待人处理或明确批准变更。
+- 只有满足角色契约的有效启动、正确 Task/Dispatch 身份和带匹配生命周期 ID 的 `worker_done`，才能进入下一阶段。Provider 偏离时，即使代码或测试通过，也不能按正常完成处理。
+
 ### Brain（协调者 + 架构师）
 
 - **会话名**：`<填写会话名，如 brain>`
