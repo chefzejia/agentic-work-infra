@@ -12,6 +12,7 @@
   - [工程与验证纪律](skills/engineering-discipline/SKILL.md) — 工具选择梯度、变更 7 铁律、三面调试与验证分层
   - [多 Agent 三角色协作](skills/multi-agent-collab/SKILL.md) — 基于信息差异隔离的 Brain / Worker / Tester 协作协议
   - [知识库协同](skills/knowledge-base/SKILL.md) — 共同知识对象的构建、核对与维护
+  - [网页图文研究包](skills/web-research-with-assets/SKILL.md) — 网页/推文离线剪藏、关键配图本地化与证据包构建
 - **调研归档（Lab）**：
   - [研究文档](docs/research/README.md) — 特定工具（Orca、Herdr、Magpie 等）的实测与过程推演记录
 
