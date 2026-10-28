@@ -6,14 +6,12 @@
 
 ### Worker Agent 与模型实测评估
 **文件**：[worker-benchmark-2026-10-28.md](worker-benchmark-2026-10-28.md)  
-**事实核查**：2026-10-28（基于本机 Magpie Gateway 账单分析 + `obsidian_labs` 7 组隔离 Worktree 盲测）
+**事实核查**：2026-10-28（基于本机 Magpie Gateway 账单分析 + `obsidian_labs` 11 组隔离 Worktree 盲测，含 `gpt-6.1-terra` 四档位全测）
 
 **核心结论**：
-- **主力极速 Worker**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-sol`（`effort=medium` 或 `low`）—— **68 秒完成**（仅 7~8 轮调用），100% 严守任务包文件范围，遇到跨文件契约冲突精准上报行号而不越权乱改。
-- **极致经济 Worker**：`DSH` + `sorrycode-cn/deepseek-flash` —— **78 秒完成**，Prompt Cache 命中率 92%，单任务成本不到 **$0.01**。
-- **关键排障发现**：
-  - 过去慢且贵的主因是 Worker 被锁死在 `effort=xhigh`（单次请求耗时 18s+）以及 `~/.claude/settings.json` 中 `CLAUDE_CODE_EFFORT_LEVEL=max` 劫持了 CLI 参数；
-  - `sorrycode-gpt/gpt-6.1-terra` 当前上游通道 503/超时不可用；`sorrycode-cn/qwen3.8-flash` 0% 缓存且易陷入循环超时。
+- **主力首选 Worker（细致度与性价比之王）**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-terra` (**`effort=high`**) —— **79.6 秒完成**（8 轮调用，单任务 **$0.067**，TTFT 仅 **4.2s**），100% 严守范围，且**全场唯一**主动发现相邻模块 `ObsidianVaultHost.ts` 的跨宿主异常类型并做了兼容（`low` 会漏校验，`xhigh` 代码与 `high` 一字不差但慢 38s）。
+- **并列极速 Worker（大模型降维快刀）**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-sol` (**`effort=low` 或 `medium`**) —— **68.0 秒完成**（仅 7~8 轮调用，**$0.06–$0.12**），100% 严守任务包文件范围，遇到跨文件契约冲突精准上报行号。
+- **极致经济 Worker**：`DSH` + `sorrycode-cn/deepseek-flash` —— **78.3 秒完成**，Prompt Cache 命中率 92%，单任务成本不到 **$0.01**。
 
 ---
 
