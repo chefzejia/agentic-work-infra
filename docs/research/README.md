@@ -4,6 +4,19 @@
 
 ## 多 Agent 协作
 
+### Worker Agent 与模型实测评估
+**文件**：[worker-benchmark-2026-10-28.md](worker-benchmark-2026-10-28.md)  
+**事实核查**：2026-10-28（基于本机 Magpie Gateway 账单分析 + `obsidian_labs` 7 组隔离 Worktree 盲测）
+
+**核心结论**：
+- **主力极速 Worker**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-sol`（`effort=medium` 或 `low`）—— **68 秒完成**（仅 7~8 轮调用），100% 严守任务包文件范围，遇到跨文件契约冲突精准上报行号而不越权乱改。
+- **极致经济 Worker**：`DSH` + `sorrycode-cn/deepseek-flash` —— **78 秒完成**，Prompt Cache 命中率 92%，单任务成本不到 **$0.01**。
+- **关键排障发现**：
+  - 过去慢且贵的主因是 Worker 被锁死在 `effort=xhigh`（单次请求耗时 18s+）以及 `~/.claude/settings.json` 中 `CLAUDE_CODE_EFFORT_LEVEL=max` 劫持了 CLI 参数；
+  - `sorrycode-gpt/gpt-6.1-terra` 当前上游通道 503/超时不可用；`sorrycode-cn/qwen3.8-flash` 0% 缓存且易陷入循环超时。
+
+---
+
 ### 三角色协作设计
 **文件**：[三角色协作设计.md](三角色协作设计.md)  
 **事实核查**：2026-10-15（基于 Orca 官方推荐 + 第一性原理推导）
