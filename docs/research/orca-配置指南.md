@@ -1,6 +1,6 @@
 # Orca 多 Agent 协作配置指南
 
-本指南基于 Orca v1.4.224 官方文档（skill-guides/orchestration.md 和 orca-cli.md），说明如何使用 Orca 实现 Brain/Worker/Tester 三角色协作（角色定义见 [三角色协作设计.md](三角色协作设计.md)）。
+本指南基于本机 Orca v1.4.224 的 CLI/skill 文档、Orca 官方发布说明及本机只读核验，说明如何使用 Orca 实现 Brain/Worker/Tester 三角色协作（角色定义见 [三角色协作设计.md](三角色协作设计.md)）。具体行为以实际安装版本的 `orca <command> --help` 为准。
 
 ## 目标架构
 
@@ -29,7 +29,12 @@ Orca Desktop (可视化管理)
 - Coordinator（协调者）创建 Run、Task、Dispatch，并通过 `orca orchestration check --wait` 等待 `worker_done` 消息
 - 支持并行任务、依赖关系、结果验证、失败重试
 
-### 2. Orchestration 消息系统
+## 2. Orchestration 消息系统与编排绑定守则
+
+- Brain 作为 Orca Coordinator，先读取当前安装版本的编排协议：`orca skills get orchestration`。
+- 创建受监督 Worker 或 Tester 的标准路径是 `orca orchestration worker-start`，不要把普通 New Terminal 或 `orca worktree create --agent` 当作 supervised worker。
+- Worker 和 Tester 必须作为 Orca Dispatch 启动，才能收到包含 Task ID、Dispatch ID、终端句柄和生命周期命令的注入 preamble。Agent 必须使用 preamble 中的精确值，不自行重建 ID 或句柄。
+- `worker-start` 返回后，若项目绑定了特定 Provider/模型（例如指定 `--agent`、`--model`、`--effort`），Brain 应检查返回 JSON 中的 `worker.launch.effective.agent`、`worker.launch.effective.model` 等字段；不符时立即停止编排并报告，不静默降级。
 
 **核心概念**：
 - **Run**：协调者的命名空间和收件箱，记录整体目标
@@ -64,10 +69,11 @@ orca worktree create --name <task-name> --no-parent --agent codex --prompt "<tas
 - `--agent <id>`：同时启动 agent（支持 codex、claude、cursor、antigravity、muse、opencode、zcode）
 - `--prompt "<text>"`：发送初始任务描述
 
-**重要限制（v1.4.224）**：
-- `worktree create` **不支持** `--model` 和 `--effort` 参数
-- 模型选择由各 agent 自己的配置决定（见下文"配置步骤"）
-- 返回的 `result.agentTerminalHandle` 是 agent 句柄（旧版）或 `result.startupTerminal.handle`
+**重要限制（本机 v1.4.224 CLI 实测）**：
+- `worktree create` 不接受 `--model` 和 `--effort`。
+- `orchestration worker-start` 接受这两个参数；`--effort` 必须同时传 `--model`，且两者不能与 `--terminal` 一起使用。复用已有 terminal 时，模型由该 terminal 的启动配置决定。
+- 具体模型 ID 取决于 agent/provider。不要把示例 ID 当作 Orca 通用模型名。
+- 返回结果的 terminal handle 字段可能因启动路径而异；按实际 JSON 中的 `startupTerminal.handle` 或兼容字段读取。
 
 ## CLI 位置
 
@@ -101,6 +107,11 @@ $ORCA orchestration run-create --objective "实现用户认证功能" --json
 $ORCA orchestration worker-start \
   --spec "实现登录接口：POST /api/login，接收 username/password，返回 JWT token。" \
   --worktree current --agent codex --json
+
+# 如需覆盖本次 Codex Worker 的模型，可显式指定模型；effort 必须与 model 一起传。
+$ORCA orchestration worker-start \
+  --spec "为登录接口补充安全测试。" \
+  --worktree current --agent codex --model <provider-model-id> --effort <level> --json
 
 $ORCA orchestration worker-start \
   --spec "实现注册接口：POST /api/register，验证邮箱格式，密码强度检查。" \
@@ -214,7 +225,7 @@ $ORCA orchestration send \
 
 ## 配置步骤
 
-### 1. 确认 Orca 安装和项目注册
+### 1. 确认 Orca 安装和运行状态
 
 ```bash
 ORCA=/Applications/Orca.app/Contents/Resources/bin/orca
@@ -222,46 +233,31 @@ ORCA=/Applications/Orca.app/Contents/Resources/bin/orca
 # 查看版本和状态
 $ORCA status --json
 
-# 列出已注册的 repos
+# 列出 repos（需要 Orca runtime 可用）
 $ORCA repo list --json
-
-# 确认当前项目已注册（应该看到 agentic-work-infra）
-$ORCA repo list --json | grep -i agentic-work-infra
 ```
 
-✅ 本项目已在 Orca 中注册（repo ID: 确认于 2026-10-15）
+**本机核验（2026-10-15）**：安装版本为 `1.4.224`。Orca 当前已退出，`status --json` 返回 `app.running=false`、`runtime.state=not_running`，因此 CLI 的 `repo list` 和 `account list` 无法读取 runtime metadata。另对 Orca profile-state 数据库做了只读核验：`agentic-work-infra` 已登记为本地 Git 项目，设置状态为 `ready`，导入方式为 existing folder。这个持久化记录能确认项目登记，不能替代运行中的 pane/account 状态。旧笔记中的 PID、runtime ID 和 socket 地址属于瞬时信息，不保留。
 
-### 2. 配置 Agent 模型（sorrycode API）
+### 2. Codex 与 SorryCode 配置
 
-**关键发现（2026-10-15 实测修正）**：
-- `orca worktree create` **不支持** `--model` 和 `--effort`（其 help 中确实没有这两个参数）
-- `orca orchestration worker-start` **支持** `--model` 和 `--effort`，是本项目选模型的主入口
+本机 Codex CLI 的 SorryCode provider 配置位于 `~/.codex/config.toml`，本次只读检查确认当前 `model_provider` 为 `sorrycode`、模型为 `gpt-6.1-sol`、endpoint 为 `https://api.sorrycode.com/v1`。检查只输出了 provider、模型和 endpoint 元数据，没有读取或展示密钥。
 
-`worker-start` 的模型参数规则（来自 `--help` 原文）：
-- `--model <id>`：接受 Claude、Codex、Cursor、Antigravity、Muse 的 opaque provider model id
-- `--effort <level>`：**必须配合 `--model`** 使用；OMP 只接受 `--model`，不支持 `--effort`
-- 两者都不能与 `--terminal` 同时使用（复用已有 terminal 时模型由该 terminal 决定）
-- OpenCode 选模型需要已有 worktree + 可验证的执行宿主 CLI + 可用模型，不支持 effort
-- 其他 agent（含 zcode）按自身配置启动
+Orca 官方 Codex 说明确认：`System default` 使用真实的 `~/.codex`；Orca 额外管理的 Codex account 使用隔离 home，并将真实 `~/.codex/config.toml` 中的设置同步到当前 runtime home。受管 account 的设置同步失败时会保留上次成功同步的设置；已运行的 Codex session 要重启后才会使用新选择的 account。本机 `codex-pane-accounts.json` 只有 Loomscore 工作区的 `real-home` 记录，没有 `agentic-work-infra` 的显式 pane 选择；该文件未覆盖的默认路由不能仅凭 Orca 已退出时的磁盘状态确认。受管 home 当前没有 `config.toml`，也不能单独证明项目 pane 的实际路由或同步结果。
 
-**账户/模型配置位置**：
-- Codex 账户配置：`~/Library/Application Support/Orca/profiles/`
-- 或 Orca Desktop → Settings → Accounts
+**结论与操作**：SorryCode 已配置在本机 Codex 全局配置中；本次未改动任何 API key 或 Orca profile。下次打开 Orca 后，检查 `agentic-work-infra` Codex pane 的 account：若要直接使用当前 Codex 默认配置，选择 `System default`；若使用受管 account，先确认 Orca 显示其设置同步正常，再新开/重启 Codex session。不要把 `orca account add --agent codex` 当作添加 SorryCode provider 的办法，它启动的是 Codex device-auth 登录流程。若要在 Claude Code 使用 SorryCode，需按 Claude Code 自身的 provider 配置方式另行设置。
 
-**当前状态**（从 `account list --json` 确认）：
-- Codex 有 system default，使用 API key 认证
-- Claude 无活动账户
-- OpenCode 和 Devin 无账户
+### 3. 自动更新状态与核查
 
-**待配置**：
-1. 如何将 sorrycode API 配置为 Claude 和 Codex 的后端
-2. 如何指定具体模型（如 opus-5-5、gpt-6-astra）
+本机 Orca 版本是 `1.4.224`。截至 2026-10-15，Orca 官方 GitHub Releases 页面、GitHub Release API 和官方 macOS update feed 都可核验到 `v1.4.224`；该版本已发布、不是 draft 或 prerelease，并包含 macOS arm64 安装资产。第三方 SourceForge 镜像页面存在元数据冲突：`/v1.4.224/` 文件目录列出 `1.4.224` 资产，但页面的“Latest Version”文案出现 `1.4.226`；该站点同时声明自己不是 Orca 官方关联方。对应 GitHub tag、release 页面和下载地址均无法核验 `1.4.225`/`1.4.226`，因此镜像页面的更高版本字符串不足以证明存在更高的官方正式版。当前只能确认官方渠道可验证的版本是 `1.4.224`，不能据此断言全网不存在更高的未发布或非官方构建。这不证明先前的自动更新流程成功，也不能仅凭界面上的失败提示判断安装损坏。由于没有记录尝试更新前的版本，无法判断是否曾升级完成后又在退出、重启或状态提示阶段报错。
 
-**推测路径**（需验证）：
-- 检查 `~/Library/Application Support/Orca/profiles/<profile-id>/` 下的配置文件
-- 或在 Orca Desktop Settings → Accounts 中添加自定义 API endpoint
+安装包内的 `app-update.yml` 指向 GitHub `stablyai/orca`，并含 `releaseType: draft`。electron-builder v26 文档将 `releaseType` 定义为 GitHub 发布选项，默认会创建 draft release；自动更新文档说明打包后的 `app-update.yml` 提供更新源配置。GitHub 上未发布的 draft 对公开更新不可见，但 `v1.4.224` 本身是已发布的正式版。因此，仅看到包内这个字段，不能证明 Orca 客户端在请求 draft，也不能解释本次失败。
 
-### 3. 启动常驻 Brain 和 Tester
+Orca 官方仓库有一条相似的 macOS 报告：v1.4.209 更新至 v1.4.210 时，第一次检查曾用新 release tag 请求旧版本 zip，导致 404；再次检查后成功。该 issue 仍是未解决报告，只能说明“缓存的更新信息/发布时序”是一个可能路径，不能证明本机这次失败也是同一原因。本机 `~/Library/Caches/orca-updater/pending/update-info.json` 不存在，`daemon.log` 只有普通连接记录；Orca 主进程 updater 的具体失败信息未被现存日志捕获。因此，自动更新失败根因仍无法确认。不要手动改写 `/Applications/Orca.app` 内的 `app-update.yml`。
+
+如之后仍需诊断失败原因，应保留具体失败时刻和 updater 日志中的错误码/错误文本，再检查网络请求、发布 feed/manifest、下载与校验、macOS 安装过程。当前 Orca 已退出，本次没有重启它，也没有执行更新或安装操作。
+
+### 4. 启动常驻 Brain 和 Tester
 
 **方式 A：在 Orca Desktop 中手动创建**（推荐）：
 1. 打开 Orca Desktop
@@ -299,7 +295,7 @@ $ORCA terminal list --worktree active --json
 $ORCA terminal show --terminal <handle> --json
 ```
 
-### 4. 验证配置
+### 5. 验证配置
 
 **测试简单的监督式编排**：
 ```bash
@@ -342,47 +338,27 @@ $ORCA worktree create \
 
 ## 本机运行时状态
 
-**Orca 运行时**（确认于 2026-10-15）：
-- Version: 1.4.224
-- PID: 30722
-- Runtime ID: 22dad164-f3da-41b3-abc6-bfc4762afd66
-- WebSocket: ws://127.0.0.1:6768
-- Unix Socket: /Users/zejiawu/Library/Application Support/orca/o-30722-22da.sock
-
-**Orchestration DB**：
-- 位置：`~/Library/Application Support/Orca/orchestration.db`
-- 大小：452 KB
-- 主要表：runs、tasks、worker_dispatches、messages、deliveries
-
-**已注册 repos**：45 个（包括 agentic-work-infra）
+只记录本次可复核且对配置决策有用的状态：截至 2026-10-15，CLI 版本为 `1.4.224`，Orca app/runtime 已退出。profile-state 数据库确认 `agentic-work-infra` 项目已登记且设置状态为 `ready`；运行时 CLI 当前不能查询实时 account/pane 状态。旧笔记里的 PID、Runtime ID、WebSocket、Unix socket、数据库大小和 repo 数量都属于瞬时状态，不作为当前事实保留。
 
 ## 待解决问题
 
-以下问题需要进一步验证或查看 Orca 源码：
+以下内容保持为待核实项，不据旧笔记推断：
 
-1. **自定义 API endpoint**：如何配置 sorrycode 作为 Claude 和 Codex 的后端？
-   - 查看 `~/Library/Application Support/Orca/profiles/` 的 agent 配置
-   - 或在 Orca Desktop Settings → Accounts 中配置
-
-2. **模型选择**（已修正）：`worktree create` 不支持 `--model`/`--effort`，但 `worker-start` **支持**
-   - 选模型走 `worker-start --model <id> [--effort <level>]`
-   - 复用已有 terminal 时不能传这两个参数，模型由该 terminal 决定
-   - 各 agent 无显式 `--model` 时按自身配置启动
-
-3. **消息路由**：`orchestration send` 的 `--to` 参数支持的地址格式
-   - `run:<id>`：发送给 Run 的协调者
-   - `dispatch:<id>`：发送给特定 Dispatch 的 Worker
-   - `@all`、`@idle`、`@codex`、`@claude`：组地址（发送给 Run 内的所有/空闲/特定类型 Worker）
-   - `@worktree:<id>`：发送给特定 worktree 的所有 terminal
-
-4. **常驻会话保持**：Orca Desktop 如何保证 Brain/Tester 不被自动关闭？
-   - Orca 的 worktree 和 terminal 默认持久化，除非显式 `terminal close`
-   - 需要确认 Orca Desktop 的 session 恢复机制（重启后是否自动恢复）
+1. `agentic-work-infra` 已在本机 profile-state 中登记且状态为 `ready`；它的 Codex pane 当前是否明确选择 real-home 或 Orca managed account 仍未核实。Orca 运行后在项目 pane 的 account 设置中确认；若选 managed account，再确认配置同步状态。
+2. Orca 退出后是否会自动恢复特定 Brain/Tester 会话。本文不将“worktree/terminal 可持久化管理”推导为“进程或 agent 会话一定自动恢复”。
+3. 本次自动更新失败的具体原因。需有对应失败日志或错误码才能判断。
 
 ## 参考
 
-- **Orca GitHub**：https://github.com/stablyai/orca（92,723 stars，MIT 许可）
+- **Orca GitHub**：https://github.com/stablyai/orca
+- **本机所装正式版发布说明**：https://github.com/stablyai/orca/releases/tag/v1.4.224
+- **第三方 SourceForge 镜像（页面元数据与文件目录存在冲突，非官方关联方）**：https://sourceforge.net/projects/orca.mirror/files/v1.4.224/
 - **官方文档**：https://onorca.dev/docs
+- **Codex 配置与账户切换**：https://www.onorca.dev/docs/agents/codex 和 https://www.onorca.dev/docs/agents/codex-hot-swap
+- **macOS 自动更新相似报告（未解决）**：https://github.com/stablyai/orca/issues/22621
+- **electron-builder v26 发布与更新源说明**：https://www.electron.build/v26/docs/publish/
+- **electron-builder v26 自动更新说明**：https://www.electron.build/v26/docs/features/auto-update/
+- **electron-builder 自动更新排障**：https://www.electron.build/v26/docs/troubleshooting/
 - **Skill Guides**（本指南的主要来源）：
   - `skill-guides/orchestration.md`：监督式编排核心概念和循环
   - `skill-guides/orca-cli.md`：worktree 和 terminal 管理
@@ -395,4 +371,4 @@ $ORCA worktree create \
     - `low-level-topology.md`：自定义 argv 和 terminal 拓扑
     - `legacy-contract-migration.md`：旧版协议兼容
 
-**版本说明**：本指南基于 Orca v1.4.224（2026-10-15）的实际 CLI 输出编写。更新版本的 Orca 可能支持新功能（如 `agent launch`、`--model`/`--effort` 参数），届时需要更新本指南。
+**版本说明**：CLI 参数结论对应本机 Orca v1.4.224（2026-10-15）实测。Orca 更新后应重新检查安装版本对应的 `--help` 与官方发布说明；不要根据旧文档推测命令是否新增或参数是否变更。

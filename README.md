@@ -2,18 +2,24 @@
 
 > **Agent 时代，人和 Agent 协同的核心是：双方面对同一个工作状态，共同观测、操作、修正和演化，而不是各自维护一套。**
 
-## 这个项目研究什么
+## 这个项目做什么
 
-本项目研究 Agent 时代人和 Agent 如何协同完成真实工作——怎样分工、怎样保持工作状态可观测、怎样避免协同结构在实践中跑偏。
+本项目研究人和 Agent 如何协同完成真实工作——怎样分工、怎样保持工作状态可观测、怎样避免协同结构在实践中跑偏。
 
-知识库、投标等是研究课题（track），用于在真实工作中验证协同模型。
+本仓遵循 **“公理（Core） + 调研实验室（Research） + 自解释技能包（Skills）”** 的三层架构，所有交付的 Skill 均保持工具无关与自解释。
 
-## 开始
+## 目录与入口
 
-1. [项目入口](AGENTS.md) — 如何使用本仓、如何修改本仓
-2. [人机协同模型](docs/core/agentic-work-model.md) — 原则和推导
-3. [文档工程指南](docs/governance/agent-governance.md) — 改造项目治理
-4. [多 Agent 协作](docs/governance/templates/roles.md) — 大型项目协作架构
-5. [知识库 Skill](tracks/knowledge-base/SKILL.md) — 在知识整理中验证协同
+1. **[项目入口](AGENTS.md)** — 仓库架构、路由与维护约束
+2. **底层公理（`docs/core/`）**
+   - [人机协同模型](docs/core/agentic-work-model.md) — 第一性原理与三层工作状态
+   - [Skill 设计规范](docs/core/skill-design.md) — Skill 即代码的设计准则
+3. **可执行技能包（`skills/`）**
+   - [project-governance](skills/project-governance/SKILL.md) — 极简项目治理与按需文档模板
+   - [engineering-discipline](skills/engineering-discipline/SKILL.md) — 工程变更、分层验证与调试纪律
+   - [multi-agent-collab](skills/multi-agent-collab/SKILL.md) — 工具无关的 Brain / Worker / Tester 三角色协作协议
+   - [knowledge-base](skills/knowledge-base/SKILL.md) — 人机共同知识对象的构建与维护
+4. **调研与实验室（`docs/research/`）**
+   - [研究索引](docs/research/README.md) — 多 Agent 工具实测（Orca、Herdr）与协同模式调研（Magpie）
 
 [Apache License 2.0](LICENSE)

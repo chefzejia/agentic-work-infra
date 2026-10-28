@@ -69,7 +69,7 @@
 **我们需要做什么**：
 - 让 Agent 理解并执行 Orca 的协作协议（在 system prompt 或文档中说明）
 - 选择合适的协作模式（监督式 vs 完全移交）
-- 配置 Agent 账户和模型（如 sorrycode API）
+- 配置 Agent 账户和模型；本机 Codex CLI 的 SorryCode provider 已在 `~/.codex/config.toml` 中配置
 
 **我们不需要做什么**：
 - 不需要设计自己的任务生命周期管理
@@ -86,11 +86,13 @@
 
 **模型选择**：
 - ✅ `worker-start` 现已支持 `--model` 和 `--effort` 参数（v1.4.224 实测确认）
-- 支持的 agent：Claude, Codex, Cursor, Antigravity, Muse
-- 示例：`--agent codex --model "claude-opus-5-5" --effort "extended"`
+- Orca 的 Codex `System default` 使用本机 `~/.codex`；受管 Codex account 会把其中的设置同步到独立 home
+- `agentic-work-infra` 项目的 pane 当前选用哪个 account 尚未核实
+- 示例模型 ID 应使用所选 agent/provider 实际支持的值；`--effort` 与 `--model` 一起传
 
-**待配置**：
-- sorrycode API endpoint 配置方式（使用自定义 API）
+**待核实**：
+- Orca 运行后确认本项目 Codex pane 选用 `System default` 还是受管 account，并确认受管 account 的设置同步状态
+- Claude Code 使用 SorryCode 时需按 Claude Code 自身的 provider 配置方式单独设置
 
 ---
 
@@ -141,13 +143,13 @@
 
 ## 多 Agent 工具对比
 
-| 工具 | 定位 | Stars | 适用场景 |
-|------|------|-------|----------|
-| **Orca** | 桌面 ADE，并行 worktrees | 92,723 | GUI 工作流，可视化管理多 agents |
-| **Herdr** | 终端运行时 | 19k+ | 后台持久化，CLI 工作流 |
-| **LangGraph** | 编排框架（低层） | - | 复杂状态流转，需要精细控制 |
-| **CrewAI** | 编排框架（高层） | - | 角色明确的多 Agent 团队 |
-| **Claude Code Workflow** | 内置编排 | - | 官方原生，agent()/parallel()/pipeline() |
+| 工具 | 定位 | 适用场景 |
+|------|------|----------|
+| **Orca** | 桌面 ADE，并行 worktrees | GUI 工作流，可视化管理多 agents |
+| **Herdr** | 终端运行时 | 后台持久化，CLI 工作流 |
+| **LangGraph** | 编排框架（低层） | 复杂状态流转，需要精细控制 |
+| **CrewAI** | 编排框架（高层） | 角色明确的多 Agent 团队 |
+| **Claude Code Workflow** | 内置编排 | 官方原生，agent()/parallel()/pipeline() |
 
 ---
 
