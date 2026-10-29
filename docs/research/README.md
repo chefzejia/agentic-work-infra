@@ -4,14 +4,16 @@
 
 ## 多 Agent 协作
 
-### Worker Agent 与模型实测评估
+### Worker Agent 与候选模型实测评估及指标体系全记录
 **文件**：[worker-benchmark-2026-10-28.md](worker-benchmark-2026-10-28.md)  
-**事实核查**：2026-10-28（基于本机 Magpie Gateway 账单分析 + `obsidian_labs` 11 组隔离 Worktree 盲测，含 `gpt-6.1-terra` 四档位全测）
+**事实核查**：2026-10-28 ~ 2026-10-29（基于本机 Magpie Gateway 账单分析 + `obsidian_labs` 11 组隔离 Worktree 盲测，**仅针对本机指定的候选模型与宿主**）
 
-**核心结论**：
+**核心内容与结论**：
+- **评测方法论**：拆解 `TTFT（首字延迟）`、`流速 (tok/s)` 与 `交互轮数 (N)` 的关系（$\text{总耗时} = N \times (\text{TTFT} + \text{输出耗时} + \text{工具耗时})$），解释为什么流速最快的 `deepseek-flash`（180 tok/s，19 轮碎步）在端到端耗时上略逊于少轮数高密度的 `Codex CLI`（7~8 轮大步）。
 - **主力首选 Worker（细致度与性价比之王）**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-terra` (**`effort=high`**) —— **79.6 秒完成**（8 轮调用，单任务 **$0.067**，TTFT 仅 **4.2s**），100% 严守范围，且**全场唯一**主动发现相邻模块 `ObsidianVaultHost.ts` 的跨宿主异常类型并做了兼容（`low` 会漏校验，`xhigh` 代码与 `high` 一字不差但慢 38s）。
 - **并列极速 Worker（大模型降维快刀）**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-sol` (**`effort=low` 或 `medium`**) —— **68.0 秒完成**（仅 7~8 轮调用，**$0.06–$0.12**），100% 严守任务包文件范围，遇到跨文件契约冲突精准上报行号。
 - **极致经济 Worker**：`DSH` + `sorrycode-cn/deepseek-flash` —— **78.3 秒完成**，Prompt Cache 命中率 92%，单任务成本不到 **$0.01**。
+- **Magpie 档位锁定排障**：记录了上游 `/v1/models?client_version=0.165.0` 将 `gpt-6.1-terra` 错误标记为 `effort: none` 导致 GUI/Codex 无法切换档位的根因与本地修复方案。
 
 ---
 
