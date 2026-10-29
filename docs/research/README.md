@@ -9,6 +9,7 @@
 **事实核查**：2026-10-28 ~ 2026-10-29（基于本机 Magpie Gateway 账单分析 + `obsidian_labs` 11 组隔离 Worktree 盲测，**仅针对本机指定的候选模型与宿主**）
 
 **核心内容与结论**：
+- **实验前置条件与效度威胁披露（学术级严谨性）**：完整盘点并量化了本机叠加条件对评测结果的潜在混杂影响——包括 **RTK（Rust Token Killer v0.99.0）** 在 `Codex CLI`/`Claude Code` 上的非对称注入（`PreToolUse` 输出降噪 + `@RTK.md` 的 *"batch related commands into one call"* 提示词引导）、**Magpie 内置插件栈**（`astrlink-guard` 本地 PII 脱敏延迟、不同 `baseAPI` 协议转译对 Prompt Cache 命中率的影响、`272K` 自动压缩阈值）以及 **Orca Hooks** 开销。
 - **评测方法论**：拆解 `TTFT（首字延迟）`、`流速 (tok/s)` 与 `交互轮数 (N)` 的关系（$\text{总耗时} = N \times (\text{TTFT} + \text{输出耗时} + \text{工具耗时})$），解释为什么流速最快的 `deepseek-flash`（180 tok/s，19 轮碎步）在端到端耗时上略逊于少轮数高密度的 `Codex CLI`（7~8 轮大步）。
 - **主力首选 Worker（细致度与性价比之王）**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-terra` (**`effort=high`**) —— **79.6 秒完成**（8 轮调用，单任务 **$0.067**，TTFT 仅 **4.2s**），100% 严守范围，且**全场唯一**主动发现相邻模块 `ObsidianVaultHost.ts` 的跨宿主异常类型并做了兼容（`low` 会漏校验，`xhigh` 代码与 `high` 一字不差但慢 38s）。
 - **并列极速 Worker（大模型降维快刀）**：`Codex CLI` + `sorrycode-gpt/gpt-6.1-sol` (**`effort=low` 或 `medium`**) —— **68.0 秒完成**（仅 7~8 轮调用，**$0.06–$0.12**），100% 严守任务包文件范围，遇到跨文件契约冲突精准上报行号。
