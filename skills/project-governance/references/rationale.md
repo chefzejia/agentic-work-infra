@@ -17,8 +17,23 @@
 
 | 类型 | 包含文档 | 更新频率与方式 |
 | --- | --- | --- |
-| **稳定契约** | `README.md`, `AGENTS.md`, `ARCHITECTURE.md`, `DESIGN.md`, `DEPLOYMENT.md` | 仅当对外承诺、模块边界、公共接口或部署流程改变时，随代码在**同一个 Commit** 中更新。 |
+| **稳定契约** | `README.md`, `AGENTS.md`, `PRODUCT.md`, `ARCHITECTURE.md`, `DEPLOYMENT.md` | 仅当对外承诺、模块边界、公共接口或部署流程改变时，随代码在**同一个 Commit** 中更新。 |
 | **动态状态** | `HANDOFF.md`, `LESSONS.md` | 随工作推进更新。`HANDOFF.md` 原地替换过期状态，不充当完成日志；历史验收结果留在 Git Commit 或 PR 记录中。 |
+
+## 为什么砍掉中间态（RFC / 多份领域碎文档 / 文字版 DESIGN.md）
+
+传统大团队研发流程依赖长链条的文字缓冲物（`PRD → DOMAIN → RFC → Figma/DESIGN.md → 接口文档 → 代码`），因为在人类组织中跨部门沟通昂贵、改代码慢。
+
+但在 **高杠杆个体/小团队 + Agent 协同（AI-Native）** 模式下，写代码和改原型的速度已经远快于维护多份中间文档。保留长链条会带来严重的**上下文跳转损耗**与**契约撕裂**：
+
+1. **一份 `docs/PRODUCT.md` + Directory-as-Product**：
+   - 把产品定位、核心模块、交互铁律、明确不做什么（Non-goals）和核心领域术语内聚在一份 `docs/PRODUCT.md` 中，避免 Agent 为了改一个字段去跨 5 份碎文档（`PRODUCT` / `DOMAIN` / `DATA_PROTOCOL` / `TERMS`）对齐。
+   - 前后端代码目录直接 1:1 映射 `PRODUCT.md` 中的顶层模块名（例如产品分 4 个 Tab，后端包与前端页面目录就叫这 4 个名字），让人和 Agent 零翻译成本定位代码。
+2. **讨论完直接落决策（ADR）并实施，不写过渡性 `RFC`**：
+   - 方案推演在对话/Plan 模式中完成；一旦明确，直接将选型理由与淘汰方案写入 `ARCHITECTURE.md`（或 `docs/adr/`）并立即改代码。未想清楚的方案不落盘。
+3. **原型即产品（Prototype-as-Production）与契约代码化（Schema-as-Contract）**：
+   - 当项目已有高保真可交互原型或前端样式系统（`styles.css`）时，直接以样式代码和组件作为唯一视觉真源，不再维护文字版 `DESIGN.md`；当生产前端（如 `web/`）已 1:1 承接原型后，直接在生产前端上迭代，静态原型目录即可功成身退。
+   - 前后端数据结构由单一代码真源（如 `schema.py` → OpenAPI → `openapi-typescript`）自动导出生成，不手写易过期的接口协议文档。
 
 ## Mono-repo 的继承与自治
 
