@@ -15,7 +15,7 @@ description: >
 3. **斩断冗余中间态（No Bureaucratic Artifacts）**：
    - **一份 `docs/PRODUCT.md` 封顶**：业务产品定位、模块划分、交互铁律与领域概念全部内聚于一份 `docs/PRODUCT.md`，不拆散为独立的 `PRD`、`DOMAIN`、`TERMS`，也不写过渡性的 `RFC`。
    - **代码目录 1:1 映射产品模块（Directory-as-Product）**：前后端源码目录直接以产品核心模块命名，消除业务词与代码词的翻译层。
-   - **原型即产品（Prototype-as-Production）**：若已有可运行原型或前端样式系统（`styles.css`），直接以代码作为唯一视觉真源演进，不再单独维护文字版 `DESIGN.md`。
+   - **原型即产品 & 空间视觉 SVG 优先（SVG-First & Prototype-as-Production）**：先用高保真 HTML/CSS + **声明式内联 `<svg>`（`viewBox` 笛卡尔坐标系）**构建核心数据可视化、刻度尺与状态地形图（拒绝千篇一律的“B 端后台表单/卡片堆砌”和臃肿黑盒图表库）；生产前端（首选 **Svelte 5 Runes** 等零虚拟 DOM 编译型框架）直接 1:1 承接原型的 `styles.css` 与 `<svg>` 结构并注入响应式数据，严禁在转入生产时将 SVG 空间图形退化为普通 HTML `div` 方框。已有代码样式真源时不再单独维护文字版 `DESIGN.md`。
 4. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
 
 ## 文档演进梯度（按真实痛点触发）
