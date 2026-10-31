@@ -6,6 +6,7 @@
 
 - **底层公理（Why）**：
   - [人机协同模型](docs/core/agentic-work-model.md) — 共同工作状态、三层分离与人机边界
+  - [AI-Native 第一性原理](docs/core/ai-native-first-principles.md) — 消除“人类带宽妥协层”，回归物理、数学与系统原生最优解
   - [Skill 设计规范](docs/core/skill-design.md) — Skill 即代码、自解释与迭代漏斗
 - **核心交付（Skills，How）**：
   - [项目治理](skills/project-governance/SKILL.md) — 极简起步、按痛点裂变的仓库治理与文档模板

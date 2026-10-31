@@ -13,6 +13,7 @@
 1. **[项目入口](AGENTS.md)** — 仓库架构、路由与维护约束
 2. **底层公理（`docs/core/`）**
    - [人机协同模型](docs/core/agentic-work-model.md) — 第一性原理与三层工作状态
+   - [AI-Native 第一性原理](docs/core/ai-native-first-principles.md) — 消除“人类带宽妥协层”，始终回归物理、数学与原生最优解
    - [Skill 设计规范](docs/core/skill-design.md) — Skill 即代码的设计准则
 3. **可执行技能包（`skills/`）**
    - [project-governance](skills/project-governance/SKILL.md) — 极简项目治理与按需文档模板

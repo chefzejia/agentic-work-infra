@@ -10,13 +10,16 @@ description: >
 
 ## 核心原则
 
-1. **代码与原型自解释优先（Schema & Prototype as Contract）**：能从类型定义（如 `schema.py` → OpenAPI → TS 类型）、样式源码（`styles.css`）、`package.json` 或 Git 历史看出的事实，绝不手写第二份文字文档。
-2. **极简起步，按需裂变**：新项目或小项目只建根 `AGENTS.md`（控制在 50 行内）和 `README.md`。不预设空目录，不跨仓复制几百行的静态通用标准。
-3. **斩断冗余中间态（No Bureaucratic Artifacts）**：
+1. **打掉“人类带宽妥协层”，直选物理与原生最优解（The AI-Native Razor）**：
+   - 启动任何项目或做技术栈选型时，必须先用第一性原理质疑传统惯例：拒绝为了迁就过去“人手写慢、多语言学习贵”而发明的妥协层（如臃肿跨端运行时、厚重 ORM、黑盒重型图表库、拖拽式低代码、多级传话文档）。
+   - 始终选择**物理性能上限最高、数学与编译器确定性最强**的原生方案：共享强类型契约（Schema），各端原生生成（如 iOS 直接用 Swift/SwiftUI，Web 用 Svelte 5 + 内联 `<svg>`，数据用 SQLite WAL / DuckDB + Polars 向量化计算）。
+2. **代码与原型自解释优先（Schema & Prototype as Contract）**：能从类型定义（如 `schema.py` → OpenAPI → TS 类型）、样式源码（`styles.css`）、`package.json` 或 Git 历史看出的事实，绝不手写第二份文字文档。
+3. **极简起步，按需裂变**：新项目或小项目只建根 `AGENTS.md`（控制在 50 行内）和 `README.md`。不预设空目录，不跨仓复制几百行的静态通用标准。
+4. **斩断冗余中间态（No Bureaucratic Artifacts）**：
    - **一份 `docs/PRODUCT.md` 封顶**：业务产品定位、模块划分、交互铁律与领域概念全部内聚于一份 `docs/PRODUCT.md`，不拆散为独立的 `PRD`、`DOMAIN`、`TERMS`，也不写过渡性的 `RFC`。
    - **代码目录 1:1 映射产品模块（Directory-as-Product）**：前后端源码目录直接以产品核心模块命名，消除业务词与代码词的翻译层。
    - **原型即产品 & 空间视觉 SVG 优先（SVG-First & Prototype-as-Production）**：先用高保真 HTML/CSS + **声明式内联 `<svg>`（`viewBox` 笛卡尔坐标系）**构建核心数据可视化、刻度尺与状态地形图（拒绝千篇一律的“B 端后台表单/卡片堆砌”和臃肿黑盒图表库）；生产前端（首选 **Svelte 5 Runes** 等零虚拟 DOM 编译型框架）直接 1:1 承接原型的 `styles.css` 与 `<svg>` 结构并注入响应式数据，严禁在转入生产时将 SVG 空间图形退化为普通 HTML `div` 方框。已有代码样式真源时不再单独维护文字版 `DESIGN.md`。
-4. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
+5. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
 
 ## 文档演进梯度（按真实痛点触发）
 
