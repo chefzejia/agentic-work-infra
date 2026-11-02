@@ -1,22 +1,25 @@
-# ADR-NNN: <决策标题>
+# ADR: <决策标题>
 
-- **日期**：<YYYY-MM-DD>
-- **状态**：<Proposed | Accepted | Superseded by ADR-XXX>
+Status: <proposed | implemented | rejected — 一句话说明拒绝原因>
 
-## 背景与问题
+<!-- 当 Status 为 implemented 时，全文必须使用现在时（Present Tense）描述已上线事实，
+     并删除所有计划性章节（如 Proposal / Migration Plan / Acceptance Criteria）。 -->
 
-<什么业务或技术约束迫使我们做出选择？>
+## Problem
 
-## 决策
+<不依赖具体方案的背景与核心约束：什么真实问题迫使我们做这个决策？>
 
-<核心决定是什么？>
+## Decision
 
-## 理由与代价
+<当前生效的决定是什么（现在时），锚定哪个源码文件与符号名>
 
-- **核心收益**：<解决了什么问题，让哪个未来变化更便宜>
-- **承担代价**：<增加了什么维护/运行成本，放弃了什么能力>
+## Alternatives considered
 
-## 备选方案对比
+<!-- 必填：不记录“当时为什么淘汰了方案 X”，后来的 Agent 必然会重新提议并重踩一遍坑 -->
 
-- **方案 A（`<名称>`）**：<优缺点及未采用原因>
-- **方案 B（`<名称>`）**：<优缺点及未采用原因>
+- **Why not `<备选方案 A>`**：<具体输在什么物理瓶颈、妥协层损耗或边界缺陷>
+- **Why not `<备选方案 B>`**：<具体淘汰原因>
+
+## Consequences
+
+- **收益与承担的代价**：<买到了什么确定性，放弃了什么，由哪个 Guard Test 锁死该边界>
