@@ -18,7 +18,7 @@
 3. **可执行技能包（`skills/`）**
    - [project-governance](skills/project-governance/SKILL.md) — 极简项目治理与按需文档模板
    - [engineering-discipline](skills/engineering-discipline/SKILL.md) — 工程变更、分层验证与调试纪律
-   - [multi-agent-collab](skills/multi-agent-collab/SKILL.md) — 工具无关的 Brain / Worker / Tester 三角色协作协议
+   - [multi-agent-collab](skills/multi-agent-collab/SKILL.md) — 工具无关的双环四重身份（Brain · Router · Worker · Tester）协作协议
    - [knowledge-base](skills/knowledge-base/SKILL.md) — 人机共同知识对象的构建与维护
    - [web-research-with-assets](skills/web-research-with-assets/SKILL.md) — 网页/推文离线剪藏与关键配图本地化研究包
 4. **调研与实验室（`docs/research/`）**

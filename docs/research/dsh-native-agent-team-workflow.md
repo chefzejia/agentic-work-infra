@@ -48,7 +48,10 @@
    - `.git/hooks/post-commit` 在检测到本次 `git commit` 修改了 `docs/HANDOFF.md` 且包含 `Status: pending` 时，补齐 `/opt/homebrew/bin` `PATH`（防止 GUI 客户端执行 `git commit` 时找不到 `codex` CLI），并发送极简的一句话通知 `"docs/HANDOFF.md 有新提交（Status: pending），请读取并执行。"` 秒级唤醒下游执行总控；
    - 当下游验收通过将 `docs/HANDOFF.md` 更新为 `Status: verified` 并提交、或平时整理文档时，因状态不是 `pending`，Hook 自动静默放行，彻底杜绝死循环与无效空转。
 3. **单轮闭环不早退 + 共享工作区 `Write = 1` + 固定真机沙盒 + `LESSONS.md` 错误复利**：
-   - 执行总控被唤醒后必须在同一轮次内循环 `wait_agent` 跑完 `Worker -> Tester -> Status: verified 提交`；
+   - 执行总控（Router）被唤醒后必须在同一轮次内循环 `wait_agent` 跑完 `Worker -> Tester -> Status: verified 提交`；
    - 同一工作树严格串行写（`Write = 1`），拒绝表演式并发；
-   - 真机/CUA 验收固定复用唯一 `.gitignore` 沙盒（如 `.dev-vault/`）；
+   - 真机/CUA 验收固定复用唯一 `.gitignore` 沙盒（如 `.dev-vault/`），且不抢占用户正在使用的真实桌面窗口焦点；
    - 人类只做事前契约审美与事后模式提取（重复 3 次的错误晋升为 `tests/` 守卫单测）。
+4. **双环四重身份（`Brain · Router · Worker · Tester`）消除后台会话身份迷失**：
+   - 在 `Pith` Wave 8 实测中发现：如果 `docs/ROLES.md` 只写 `Brain / Worker / Tester` 三角色，后台常驻总控会话在收到 `codex queue` 塞入的自然语言唤醒消息（如 `"请读取并执行"`）且遇到任务包白名单漏列同切面支撑文件（`src/plugins/speech-service/`）时，会误以为对面坐着人类用户，直接在后台聊天框里停下来礼貌提问（*“允许我扩大修改范围吗？”*），导致无人值守闭环中断。
+   - **根治方案**：正式将角色协议升级为**双环四重身份**——第一环是唯一面对人类的 **Brain**；第二环是由 `.git/hooks/post-commit` 发送 `[AUTO-WAKEUP]` 机器指令唤醒的无人值守 **Router（Execution Coordinator）**，统领常驻 **Worker** 与独立 **Tester**。明确规定 Router 严禁在后台会话向人类提问等回复：同切面支撑文件漏列由 Router 直接授权 Worker 补齐并重跑 Tester；核心 `core/` 契约冲突则写入 `Status: blocked` 并 `git commit` 退回给 Brain。
