@@ -12,7 +12,7 @@
 | :--- | :--- | :--- | :--- |
 | **1. 专用运行时路由派** | DeepSeek `dsh-superagent-prototype` | 独立 Runtime + SQLite 事件流 + 常驻 Router 与隔离 Worker（消融实验证明单 Session + Subagent 在中性提示下 5 次均退化为不调子代理硬干，p95 达 29.5m；双层拆分后降至 15.7m） | 偏理论原型与 IM 群聊/GitHub 多事件并发入口；个人开发 1~2 个本地项目时无需维护重型运行时。 |
 | **2. 社区维护三 Loop 派** | yetone `magpie`（[推文实证](https://x.com/yetone/status/2109855710444237018)） | 3 个常驻 `claude --dangerously-skip-permissions` 循环（`dev-app-loop` / `release-magpie` / `agents-status`）+ 严苛 CI + `LESSONS.md`（每晚人工“铲屎”提取规则） | 适合**架构已定型、每日有大量社区 Issue/PR 涌入的成熟开源项目（维护态）**；个人从 0 到 1 做新产品时若无高密度 Issue 喂入，死循环易空转或乱改。 |
-| **3. 双环解耦 + Git Hook 事件派（本仓方案 ⭐）** | `agentic-work-infra`（落地于 `Pith` / `AGU`） | **思考环（人 $\leftrightarrow$ 宏观 Brain）** + **5 行 `.git/hooks/post-commit` 只要检测到 `HANDOFF.md` 提交即秒级唤醒** + **执行环（常驻总控调度热 Worker 与独立 Tester）** | 专为**独立开发者/小团队从 0 到 1 推进 1~2 个核心产品（创作与演进态）**设计：零外部编排器依赖、零格式匹配漏触发风险、平时 0 Token 空转、需要时秒级闭环。 |
+| **3. 双环解耦 + Git Hook 事件派（本仓方案 ⭐）** | `agentic-work-infra`（落地于 `Pith` / `AGU`） | **思考环（人 $\leftrightarrow$ 宏观 Brain）** + **8 行 `.git/hooks/post-commit` 监听 `HANDOFF.md (Status: pending)` 秒级事件唤醒** + **执行环（常驻总控调度热 Worker 与独立 Tester，收口改回 `Status: verified`）** | 专为**独立开发者/小团队从 0 到 1 推进 1~2 个核心产品（创作与演进态）**设计：零外部编排器依赖、平时 0 Token 空转、需要时秒级闭环。 |
 
 ---
 
@@ -42,13 +42,13 @@
 ## 三、 极简实操规范总结
 
 1. **状态去 Session 化 + 算力热驻留**：
-   - 项目契约与当前交接任务 100% 落盘于 `docs/HANDOFF.md`；
+   - 项目契约与当前交接任务 100% 落盘于 `docs/HANDOFF.md`（顶部维护 `Status: pending | verified | blocked` 与 `Verified-Commit: <sha>`）；
    - 下游执行总控、Worker 与 Tester 作为常驻热会话（Warm Sessions）跨波次复用上下文前缀（实测命中率 `97.7% ~ 98.6%`），但当全局协作协议升级时，必须显式向常驻会话发送一条协议刷新指令。
-2. **5 行 Git Hook 秒级触发（砍掉冗余状态头匹配，100% 防漏触发）**：
-   - `.git/hooks/post-commit` 只做一件事：**只要检测到本次 `git commit` 修改了 `docs/HANDOFF.md`，立即秒级唤醒下游执行总控**（一句 `"docs/HANDOFF.md 有新提交，请读取并执行。"` 即可，不校验任何 `Status: pending` 字符串以防漏触发）；
-   - 下游验收通过后直接 `git commit` 提交代码与测试（不回改 `docs/HANDOFF.md`），天然避免二次触发死循环。
+2. **8 行 Git Hook 秒级触发（`Status: pending` 门禁防死循环 + 显式 `PATH` 保活）**：
+   - `.git/hooks/post-commit` 在检测到本次 `git commit` 修改了 `docs/HANDOFF.md` 且包含 `Status: pending` 时，补齐 `/opt/homebrew/bin` `PATH`（防止 GUI 客户端执行 `git commit` 时找不到 `codex` CLI），并发送极简的一句话通知 `"docs/HANDOFF.md 有新提交（Status: pending），请读取并执行。"` 秒级唤醒下游执行总控；
+   - 当下游验收通过将 `docs/HANDOFF.md` 更新为 `Status: verified` 并提交、或平时整理文档时，因状态不是 `pending`，Hook 自动静默放行，彻底杜绝死循环与无效空转。
 3. **单轮闭环不早退 + 共享工作区 `Write = 1` + 固定真机沙盒 + `LESSONS.md` 错误复利**：
-   - 执行总控被唤醒后必须在同一轮次内循环 `wait_agent` 跑完 `Worker -> Tester -> 代码提交`；
+   - 执行总控被唤醒后必须在同一轮次内循环 `wait_agent` 跑完 `Worker -> Tester -> Status: verified 提交`；
    - 同一工作树严格串行写（`Write = 1`），拒绝表演式并发；
    - 真机/CUA 验收固定复用唯一 `.gitignore` 沙盒（如 `.dev-vault/`）；
    - 人类只做事前契约审美与事后模式提取（重复 3 次的错误晋升为 `tests/` 守卫单测）。

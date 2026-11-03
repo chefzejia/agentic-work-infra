@@ -13,9 +13,9 @@ description: >
 1. **角色拆分的唯一依据是“信息差异”，而非“能力差异”**：
    同一个强模型既能写代码也能审代码，但**作者的上下文里包含“我为什么这么写”，这会导致验证退化为自我确认**。因此协作架构收敛为三个角色。
 2. **双环解耦与 `HANDOFF.md` + Git Hook 事件驱动（Agent-Agnostic Event-Driven Dual-Loop）**：
-   - **宏观架构环（人 $\leftrightarrow$ Thinking Brain）**：人类只面对唯一的主窗口（使用旗舰推理与沟通模型），专注需求对齐与架构决策；定稿后将任务契约写入仓库 `docs/HANDOFF.md` 并执行 `git commit`。
-   - **事件触发与自动执行环（`.git/hooks/post-commit` $\rightarrow$ Execution Coordinator $\rightarrow$ Worker & Tester）**：下游独立常驻一个执行主会话（工具无关，可按项目是否需要原生桌面 CUA 等能力自由选用宿主）。通过 Git `post-commit` 钩子监听 `docs/HANDOFF.md` 的提交——**只要 `docs/HANDOFF.md` 产生新 Commit，立即秒级事件唤醒下游执行总控**（零格式匹配依赖，100% 不漏触发；无提交时 0 轮询、0 Token 消耗；**严禁将未 `git commit` 的脏修改当作触发信号**）。
-   - **单轮闭环不早退与天然防死循环铁律**：一旦执行主会话被唤醒，必须在当前唤醒周期内**持续等待（循环 `wait_agent`，严禁短超时早退睡眠）**，串联跑完 `Worker 实现 → Tester 独立真机验收 → git commit 提交代码与测试` 全链路；下游执行环只提交代码与测试，不回改 `docs/HANDOFF.md`，从而天然杜绝 `post-commit` 死循环；平时无新提交则保持静默（0 像素打扰）。
+   - **宏观架构环（人 $\leftrightarrow$ Thinking Brain）**：人类只面对唯一的主窗口（使用旗舰推理与沟通模型），专注需求对齐与架构决策；定稿后将任务契约写入仓库 `docs/HANDOFF.md`（顶部标记 `Status: pending`）并执行 `git commit`。
+   - **事件触发与自动执行环（`.git/hooks/post-commit` $\rightarrow$ Execution Coordinator $\rightarrow$ Worker & Tester）**：下游独立常驻一个执行主会话（工具无关，可按项目是否需要原生桌面 CUA 等能力自由选用宿主）。通过 Git `post-commit` 钩子监听 `docs/HANDOFF.md` 的 `Status: pending` 提交并**秒级事件唤醒**下游执行总控（无提交时 0 轮询、0 Token 消耗；**严禁将未 `git commit` 的脏修改当作触发信号**）。
+   - **单轮闭环不早退与状态头防死循环铁律**：一旦执行主会话被唤醒，必须在当前唤醒周期内**持续等待（循环 `wait_agent`，严禁短超时早退睡眠）**，串联跑完 `Worker 实现 → Tester 独立真机验收 → 将 HANDOFF.md 更新为 Status: verified（附 Verified-Commit）并 git commit` 全链路；因收口提交的状态为 `Status: verified`，`post-commit` 钩子自动静默放行，天然杜绝死循环与文档整理误触发。
 3. **上下文当缓存管（Inline & Spill）与热节点复用**：
    - **Inline & Spill**：主会话只内联（Inline）任务 ID、结论摘要与文件路径锚点，完整细节与证据落盘（Spill）到工作区文件中按需索引。
    - **热节点复用（Warm Teammates）**：执行总控在项目周期内持续复用已驻留的具名 Worker 与 Tester 子会话（实测 KV Prompt Cache 命中率可达 95%+），消除每次新建空白会话的冷启动重读税。
@@ -76,17 +76,21 @@ Brain 调度 Worker 与 Tester 时，必须按**读写性质与耦合边界**严
 - **需 Brain 裁定项**（若为契约问题）：契约冲突点或架构缺陷说明
 ```
 
-### 3. 全局交接钩子与 Git `post-commit` 极简触发协议（`docs/HANDOFF.md`）
-为实现跨宿主、Agent 无关的全自动触发（消灭定时轮询的等待延迟与空转 Token 税，也无需任何容易漏触发的正则状态头匹配），采用**“只有上游 Brain 改 `docs/HANDOFF.md`、下游只提交代码与测试”**的单向职责边界，配合 5 行 `.git/hooks/post-commit` 脚本实现 100% 可靠唤醒：
-- **上游派发（Brain）**：定稿本轮模块级契约与验收标准后更新 `docs/HANDOFF.md`（**永远不把具体代码 diff 塞进交接文档**）并执行 `git commit`，Git 自动触发 `post-commit` 秒级唤醒下游；
-- **下游收口（Execution Coordinator）**：在同一轮次内串联完成 Worker 实现与 Tester 独立验收后，直接 `git commit` 提交代码与测试（不回改 `docs/HANDOFF.md`，因此不会再次触发 Hook 造成死循环）。
+### 3. 全局交接状态机与 Git `post-commit` 极简触发协议（`docs/HANDOFF.md`）
+为实现跨宿主、Agent 无关的全自动触发（消灭定时轮询的等待延迟与空转 Token 税，同时防止下游收口提交或日常文档整理误触发死循环），`docs/HANDOFF.md` 顶部维护确定性状态头，配合 8 行 `.git/hooks/post-commit` 脚本实现秒级闭环：
+- **`Status: pending`**：由上游 Brain 定稿任务后写入并 `git commit`（**永远不把具体代码 diff 塞进交接文档**），作为触发 `post-commit` 秒级唤醒下游的唯一信号；
+- **`Status: verified`（附 `Verified-Commit: <sha>`）**：由下游执行总控在 Worker 实现并通过 Tester 独立验收后更新并 `git commit`（因状态不再是 `pending`，`post-commit` 自动忽略，防止自己唤醒自己的死循环）；
+- **`Status: blocked`**：连续 3 轮未通过验收或遇架构/权限冲突时标记，主动通知人类裁定。
 
 ```bash
 #!/usr/bin/env bash
-# .git/hooks/post-commit（5 行极简事件驱动：只要本次 commit 修改了 docs/HANDOFF.md 即秒级唤醒下游）
+# .git/hooks/post-commit（仅当本次 commit 修改了 docs/HANDOFF.md 且顶部为 Status: pending 时秒级唤醒下游）
 if git diff-tree --no-commit-id --name-only -r HEAD --root | grep -qx "docs/HANDOFF.md"; then
-  codex queue --thread "$CODEX_COORD_THREAD_ID" --message "docs/HANDOFF.md 有新提交，请读取并执行。"
-  open -g "codex://threads/wake/${CODEX_COORD_THREAD_ID}"
+  if grep -qx "Status: pending" docs/HANDOFF.md 2>/dev/null; then
+    export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+    codex queue --thread "$CODEX_COORD_THREAD_ID" --message "docs/HANDOFF.md 有新提交（Status: pending），请读取并执行。" >/dev/null 2>&1 || true
+    open -g "codex://threads/wake/${CODEX_COORD_THREAD_ID}" >/dev/null 2>&1 || true
+  fi
 fi
 ```
 

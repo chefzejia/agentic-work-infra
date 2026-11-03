@@ -1,9 +1,13 @@
 # Handoff
 
+Status: <pending | verified | blocked>
+Verified-Commit: <sha-or-none>
+Updated: <YYYY-MM-DD>
+
 <!-- 极简事件钩子协议（Agent 无关 · Git Hook 驱动）：
-     1. 宏观 Brain 定稿任务后更新本文件并执行 git commit（未 commit 的工作区修改不触发下游）。
-     2. 仓库 .git/hooks/post-commit 只要检测到本次 commit 包含 docs/HANDOFF.md，即秒级唤醒下游常驻执行主会话（零格式匹配依赖，防止漏触发）。
-     3. 下游常驻执行主会话在同一唤醒周期内循环 wait_agent 串联完成 Worker 实现 + Tester 独立真机验收，通过后直接 git commit 代码与测试收口（不回改 HANDOFF.md，天然防止死循环）。
+     1. 宏观 Brain 定稿任务后将顶部 Status 设为 pending 并执行 git commit（未 commit 的工作区修改不触发下游）。
+     2. 仓库 .git/hooks/post-commit 检测到本次 commit 包含 docs/HANDOFF.md 且为 Status: pending 时，秒级唤醒下游常驻执行主会话。
+     3. 下游常驻执行主会话在同一唤醒周期内循环 wait_agent 串联完成 Worker 实现 + Tester 独立真机验收，通过后将 Status 更新为 verified（附 Verified-Commit）并 git commit（因状态已变为 verified，不会二次触发 Hook 死循环）。
      4. 严禁在本文件中堆砌已完成阶段的历史验收大表。 -->
 
 ## 本轮目标与范围
