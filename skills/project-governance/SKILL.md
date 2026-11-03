@@ -19,8 +19,10 @@ description: >
 4. **斩断冗余中间态（No Bureaucratic Artifacts）**：
    - **单份 `docs/PRODUCT.md` 封顶**：产品定位、模块、交互与领域概念内聚于一份文档，不拆散为 `PRD / DOMAIN / TERMS / RFC`。
    - **代码目录 1:1 映射产品模块（Directory-as-Product）**：源码顶层目录直接以产品核心模块命名。
-   - **原型即产品 & 空间视觉 `<svg>` 优先（SVG-First & Prototype-as-Production）**：高密度视觉与空间关系优先用内联 `<svg viewBox>` 绘制；生产前端（新建 Web 项目默认参考栈：`Svelte 5`）直接 1:1 承接原型的 `styles.css` 与 `<svg>` 坐标系，严禁转入生产时退化为普通 HTML `div` 方框，且不再维护文字版 `DESIGN.md`。
-5. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
+   - **原型即产品（Prototype-as-Production）**：高保真原型定稿后，生产前端直接 1:1 承接原型的样式系统与几何结构，不再额外维护重复的文字版 `DESIGN.md`。
+5. **错误复利漏斗（`LESSONS.md` → `Guard Tests`）**：
+   - 吸收 `magpie` 治理精髓：人或 Tester 在复盘/验收中抓到的重复失败模式先记入 `docs/LESSONS.md`（带翻车 Commit 证据与 `Seen N×` 计数）；一旦累计 `Seen 3×` 或属严重事故，立即固化为 `tests/` 下的静态守卫单测（Guard Test）并从 `LESSONS.md` 正文移出。
+6. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
 
 ## 文档演进梯度（按真实痛点触发）
 

@@ -1,12 +1,14 @@
 # Handoff
 
 Status: <pending | verified | blocked>
+Verified-Commit: <sha-or-none>
 Updated: <YYYY-MM-DD>
 
-<!-- 事件钩子协议（Agent 无关）：
+<!-- 事件钩子协议（Agent 无关 · Git Hook 驱动）：
      1. 宏观 Brain 定稿任务后将 Status 设为 pending 并执行 git commit（未 commit 的工作区修改不触发下游）。
-     2. 下游常驻执行主会话检测到最新已提交的 HANDOFF 为 Status: pending 时，在同一周期内串联完成 Worker 实现 + Tester 独立真机验收，通过后将 Status 更新为 verified 并 git commit。
-     3. 严禁在本文件中堆砌已完成阶段的历史验收大表。 -->
+     2. 仓库 .git/hooks/post-commit 检测到 docs/HANDOFF.md 的 Status: pending 提交后，秒级事件唤醒下游常驻执行主会话（如 codex queue + open -g codex://threads/wake/<id>，或任意 CLI 触发器）。
+     3. 下游常驻执行主会话在同一唤醒周期内循环 wait_agent 串联完成 Worker 实现 + Tester 独立真机验收，通过后将 Status 更新为 verified（附 Verified-Commit）并 git commit。
+     4. 严禁在本文件中堆砌已完成阶段的历史验收大表。 -->
 
 ## 本轮目标与范围
 
