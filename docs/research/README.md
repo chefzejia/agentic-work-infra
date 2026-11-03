@@ -4,13 +4,13 @@
 
 ## 多 Agent 协作
 
-### DSH 原生单窗口闭环与去 Session 化工作流演进（最新实践）
+### 双环四重身份与去 Session 化工作流设计（最新实践）
 **文件**：[dsh-native-agent-team-workflow.md](dsh-native-agent-team-workflow.md)
-**事实核查**：2026-11-02（基于 `Pith` 与 `AGU` 多波次迭代实测、Orca / Herdr / Codex Daemon / DSH Agent Teams 横向对比）
+**事实核查**：2026-11-03（基于多波次迭代实测、Orca / Herdr / Codex Daemon / DSH Agent Teams 横向对比）
 
 **核心结论**：
-- **区分“状态去 Session 化”与“算力热驻留”**：项目的长期状态与契约必须落盘在工作区文件中（不锁死在聊天窗口），但执行多波次任务的 Worker/Tester 节点应作为**常驻热队友（Warm Teammates）**持续复用，以保有 90%+ 的 KV Prompt Cache 命中率。
-- **单焦点人类注意力守恒**：利用 DSH 内置的 `@deepseek-ai/dsh-experimental-agent-team-profile`（`spawn_teammate` / `send_message`）与 `subagent_codex`，由主控 Brain 在幕后完成任务派发与真机视觉验收，人类只面对单一主窗口做决策。
+- **区分“状态去 Session 化”与“算力热驻留”**：项目的长期状态与契约必须落盘在工作区文件中（不锁死在聊天窗口），但执行多波次任务的 Router/Worker/Tester 节点应作为**常驻热队友（Warm Teammates）**持续复用，以保有 97%+ 的 KV Prompt Cache 命中率。
+- **双环四重身份（Brain · Router · Worker · Tester）与 Git Hook 事件驱动**：人类只面对唯一的主窗口（Brain）定契约并提交 `HANDOFF.md (Status: pending)`，通过 8 行 `.git/hooks/post-commit` 秒级拍醒下游无人值守 Router 串联常驻 Worker 与独立 Tester 闭环。
 
 ---
 

@@ -1,6 +1,6 @@
-# 多 Agent 协同工作流演进实录：从定时轮询到基于 `HANDOFF.md + Git Hook` 的秒级事件闭环
+# 多 Agent 协同工作流设计：基于 `HANDOFF.md + Git Hook` 的双环四重身份闭环
 
-> **事实核查时间**：2026-11-03（基于 `Pith` 与 `AGU` 真实运行日志 `~/.codex/sessions/2026/11/02~03/rollout-*.jsonl`、`state_5.sqlite`、`queue_1.sqlite`、`logs_2.sqlite` 源码级审计，以及 DeepSeek `dsh-superagent-prototype`、yetone `magpie`、Orca、Herdr 横向对比）
+> **事实核查时间**：2026-11-03（基于本地常驻会话 JSONL 运行日志、SQLite 账单审计，以及 DeepSeek `dsh-superagent-prototype`、yetone `magpie`、Orca、Herdr 横向对比）
 
 ---
 
@@ -10,48 +10,29 @@
 
 | 模式 | 代表项目 | 核心机制 | 适用场景与普通开发者的边界 |
 | :--- | :--- | :--- | :--- |
-| **1. 专用运行时路由派** | DeepSeek `dsh-superagent-prototype` | 独立 Runtime + SQLite 事件流 + 常驻 Router 与隔离 Worker（消融实验证明单 Session + Subagent 在中性提示下 5 次均退化为不调子代理硬干，p95 达 29.5m；双层拆分后降至 15.7m） | 偏理论原型与 IM 群聊/GitHub 多事件并发入口；个人开发 1~2 个本地项目时无需维护重型运行时。 |
-| **2. 社区维护三 Loop 派** | yetone `magpie`（[推文实证](https://x.com/yetone/status/2109855710444237018)） | 3 个常驻 `claude --dangerously-skip-permissions` 循环（`dev-app-loop` / `release-magpie` / `agents-status`）+ 严苛 CI + `LESSONS.md`（每晚人工“铲屎”提取规则） | 适合**架构已定型、每日有大量社区 Issue/PR 涌入的成熟开源项目（维护态）**；个人从 0 到 1 做新产品时若无高密度 Issue 喂入，死循环易空转或乱改。 |
-| **3. 双环解耦 + Git Hook 事件派（本仓方案 ⭐）** | `agentic-work-infra`（落地于 `Pith` / `AGU`） | **思考环（人 $\leftrightarrow$ 宏观 Brain）** + **8 行 `.git/hooks/post-commit` 监听 `HANDOFF.md (Status: pending)` 秒级事件唤醒** + **执行环（常驻总控调度热 Worker 与独立 Tester，收口改回 `Status: verified`）** | 专为**独立开发者/小团队从 0 到 1 推进 1~2 个核心产品（创作与演进态）**设计：零外部编排器依赖、平时 0 Token 空转、需要时秒级闭环。 |
+| **1. 专用运行时路由派** | DeepSeek `dsh-superagent-prototype` | 独立 Runtime + SQLite 事件流 + 常驻 Router 与隔离 Worker（消融实验证明单 Session + Subagent 在中性提示下 5 次均退化为不调子代理硬干，p95 达 29.5m；双层拆分后降至 15.7m） | 偏理论原型与 IM 群聊/GitHub 多事件并发入口；个人开发本地项目时无需维护重型运行时。 |
+| **2. 社区维护三 Loop 派** | yetone `magpie`（[推文实证](https://x.com/yetone/status/2109855710444237018)） | 3 个常驻 `claude --dangerously-skip-permissions` 循环（`dev-app-loop` / `release-magpie` / `agents-status`）+ 严苛 CI + `LESSONS.md`（每晚人工复盘提取规则） | 适合**架构已定型、每日有大量社区 Issue/PR 涌入的成熟开源项目（维护态）**；个人从 0 到 1 做新产品时若无高密度 Issue 喂入，死循环易空转或过度设计。 |
+| **3. 双环四重身份 + Git Hook 事件派（本仓方案 ⭐）** | `agentic-work-infra` | **思考环（人 $\leftrightarrow$ 宏观 Brain）** + **8 行 `.git/hooks/post-commit` 监听 `HANDOFF.md (Status: pending)` 秒级事件唤醒** + **执行环（无人值守 Router 调度常驻 Worker 与独立 Tester，收口改回 `Status: verified`）** | 专为**独立开发者/小团队从 0 到 1 推进项目（创作与演进态）**设计：零外部编排器依赖、平时 0 Token 空转、需要时秒级闭环。 |
 
 ---
 
-## 二、 演进脉络：我们走过的四步实测与证伪
+## 二、 核心机制与底层原理解析
 
-1. **阶段一：多窗口人肉剪贴板（`AGU` 早期）**
-   - 确立了基于“信息差异”的 **Brain / Worker / Tester** 三角色隔离，但靠人在不同窗口间手动复制粘贴 Prompt 和报错截图，且每次点 `New chat` 导致 KV Prompt Cache 清零（白交 20~40 秒冷启动重读税）。
-2. **阶段二：外部重型编排壳实测（Orca 与 Herdr）**
-   - **Orca**：桌面 ADE + `orchestration.db` 状态机过重，把自然对话变成了填表。
-   - **Herdr（Herdr App + `herdr-core`）**：通过 `hc send` 解决了 CLI 终端间的免粘贴通信，但本质仍是 PTY 终端容器，无法直接调用 GUI 宿主（如 ChatGPT App 或 DSH）独有的原生桌面 CUA 能力。
-3. **阶段三：15 分钟 Heartbeat 定时轮询的试水与暴露的三大缺陷（`Pith` Wave 6~7 日志审计）**
-   - 起初误以为外部 CLI 无法唤醒 ChatGPT App 已打开的 GUI 会话（因直接跑 `codex exec resume` 会报 `already has an active writer` 排他锁冲突），于是改用 ChatGPT App 内置的 15 分钟 Heartbeat（`automation.toml`）轮询 `docs/HANDOFF.md`。
-   - 审计 `~/.codex/sessions/2026/11/02/rollout-2026-11-02T20-04-53-01a19c25-ec2b-78b3-8cae-314ac4432690.jsonl` 发现了三个不查底层日志根本看不见的坑：
-     - **缺陷 A（`wait_agent` 10 秒早退导致跨周期空等）**：`21:50:59` 总控在 Heartbeat 轮询中调 `wait_agent(timeout_ms: 10000)` 仅等 10 秒即超时退出（`DONT_NOTIFY`），而 Worker 在 2 分钟后的 `21:53:33` 就跑完了全部 112 项单测，结果白白干等了下一个 15 分钟周期才唤醒 Tester。
-     - **缺陷 B（动态改写 `automation.toml` Prompt + 长寿会话规则滞后）**：总控通过 `automation_update` 把已处理 SHA 写进自己的定时任务 Prompt 里，既脆弱又强绑定宿主；且长寿常驻会话一旦启动，外部修改全局 Skill 不会自动热更新它脑子里的旧习惯（直至次日早上 `09:36` Wave 7 触发时，旧总控线程仍在调 `automation_update` 和 10s `wait_agent`）。
-     - **缺陷 C（夜间轮询空转缓存税）**：虽然常驻总控线程拿到了 `98.62%`（`8,109,952 / 8,223,082`）的极高缓存命中率（常驻 Worker `01a19c2a` 在 5,984 万总输入中也达到了 `97.75%` 缓存命中率），但总控线程整夜每 15 分钟醒来跑一次 `git log`，从晚间 822 万 Token 空转累积到了次日早上的 2,396 万 Token。
-4. **阶段四：拆解源码跑通「Git `post-commit` Hook 秒级事件驱动」（终极形态）**
-   - 逆向核查 `/Applications/ChatGPT.app/Contents/Resources/app.asar` 主进程源码（`early-bootstrap-339.js` 与 `early-bootstrap-916.js`）及 `queue_1.sqlite` 发现：
-     - 外部虽然不能直接抢 `resume` 写锁，但可以通过 `codex queue --thread <UUID> --message "..."` 将指令无锁写入共享的 `~/.codex/queue_1.sqlite`；
-     - 紧接着调用 macOS 原生深链 `open -g "codex://threads/wake/<UUID>"`（对应内部路由 `wakeQueuedThread`，`-g` 保持后台静默不弹窗不抢焦点），ChatGPT App 主进程会立即调用 `thread/queue/list` 并在當前打开的 GUI 会话中启动新 Turn（`turn_trigger: "queue"`）！
-   - **真机实测证据（2026-11-03 10:40:04 / UTC `02:40:04`）**：
-     - 在隔离仓库配置 `.git/hooks/post-commit`，当提交 `5f1251e` 将 `docs/HANDOFF.md` 设为 `Status: pending` 时，Git Hook 自动执行 `codex queue` + `open -g "codex://threads/wake/01a19c0f-c8e2-7ac3-9212-075f4aec1162"`；
-     - 仅隔 **2.1 秒**（UTC `02:40:06.676Z`），常驻线程 `01a19c0f` 即以 `"turn_trigger": "queue"` 自动唤醒，并在 **4.19 秒**内完成响应（`GIT_POST_COMMIT_TRIGGERED_5f1251e`），全程 **0 人工粘贴、0 窗口弹出、平时 0 轮询空转**！
+1. **为什么不用 15 分钟定时轮询（Heartbeat），而用 Git `post-commit` 事件驱动？**
+   - 定时轮询存在三大固有缺陷：
+     - **触发延迟与早退空等**：提交任务后需等待下一个轮询周期；若总控调 `wait_agent` 超时设置过短（如 10 秒）提前退出回合，即使 Worker 2 分钟后已完成，也会白白干等下一个 15 分钟周期；
+     - **夜间空转缓存税**：无新任务时，定时轮询仍会每 15 分钟唤醒会话重发十余万 Token 上下文检查 `git log`；
+     - **动态改写定时任务 Prompt 易腐败**：将已处理 Commit SHA 写进宿主私有的定时任务配置里，既脆弱又强绑定特定客户端。
+   - **Git Hook 事件驱动原语**：利用 Git 原生 `.git/hooks/post-commit`，仅在检测到 `docs/HANDOFF.md` 包含 `Status: pending` 提交时，通过本地队列与静默唤醒深链（如 `codex queue` + `open -g "codex://threads/wake/<UUID>"` 或对应 CLI 命令）在 **2 秒内**直接拍醒后台常驻会话；平时无提交则 **0 唤醒、0 Token 消耗**。
 
----
+2. **为什么必须从“三角色”升级为“双环四重身份（Brain · Router · Worker · Tester）”？**
+   - 如果只定义 `Brain / Worker / Tester` 三角色，后台常驻总控会话在收到队列塞入的自然语言唤醒消息且遇到任务包白名单漏列同切面支撑文件时，会误以为对面坐着人类用户，直接在后台聊天框里停下来提问等待授权，导致无人值守闭环中断。
+   - **四重身份职责边界**：
+     - **Brain（思考环）**：唯一面对人类的沟通桥梁，负责定义契约并提交 `docs/HANDOFF.md (Status: pending)`；
+     - **Router（执行环总控）**：由 Git Hook 发送 `[AUTO-WAKEUP]` 机器指令唤醒，明确宣告其无人值守身份（**严禁在后台会话向人类提问等待回复**）。同切面支撑文件漏列由 Router 直接授权 Worker 补齐并重跑 Tester；核心 `core/` 契约冲突则写入 `Status: blocked` 并 `git commit` 退回给 Brain；
+     - **Worker（隔离实现）**：同一工作区严格串行（`Write = 1`），防止并发踩踏；
+     - **Tester（独立验收）**：消除作者“自我确认”偏见，独立执行静态门禁与动态真机验证。
 
-## 三、 极简实操规范总结
-
-1. **状态去 Session 化 + 算力热驻留**：
-   - 项目契约与当前交接任务 100% 落盘于 `docs/HANDOFF.md`（顶部维护 `Status: pending | verified | blocked` 与 `Verified-Commit: <sha>`）；
-   - 下游执行总控、Worker 与 Tester 作为常驻热会话（Warm Sessions）跨波次复用上下文前缀（实测命中率 `97.7% ~ 98.6%`），但当全局协作协议升级时，必须显式向常驻会话发送一条协议刷新指令。
-2. **8 行 Git Hook 秒级触发（`Status: pending` 门禁防死循环 + 显式 `PATH` 保活）**：
-   - `.git/hooks/post-commit` 在检测到本次 `git commit` 修改了 `docs/HANDOFF.md` 且包含 `Status: pending` 时，补齐 `/opt/homebrew/bin` `PATH`（防止 GUI 客户端执行 `git commit` 时找不到 `codex` CLI），并发送极简的一句话通知 `"docs/HANDOFF.md 有新提交（Status: pending），请读取并执行。"` 秒级唤醒下游执行总控；
-   - 当下游验收通过将 `docs/HANDOFF.md` 更新为 `Status: verified` 并提交、或平时整理文档时，因状态不是 `pending`，Hook 自动静默放行，彻底杜绝死循环与无效空转。
-3. **单轮闭环不早退 + 共享工作区 `Write = 1` + 固定真机沙盒 + `LESSONS.md` 错误复利**：
-   - 执行总控（Router）被唤醒后必须在同一轮次内循环 `wait_agent` 跑完 `Worker -> Tester -> Status: verified 提交`；
-   - 同一工作树严格串行写（`Write = 1`），拒绝表演式并发；
-   - 真机/CUA 验收固定复用唯一 `.gitignore` 沙盒（如 `.dev-vault/`），且不抢占用户正在使用的真实桌面窗口焦点；
-   - 人类只做事前契约审美与事后模式提取（重复 3 次的错误晋升为 `tests/` 守卫单测）。
-4. **双环四重身份（`Brain · Router · Worker · Tester`）消除后台会话身份迷失**：
-   - 在 `Pith` Wave 8 实测中发现：如果 `docs/ROLES.md` 只写 `Brain / Worker / Tester` 三角色，后台常驻总控会话在收到 `codex queue` 塞入的自然语言唤醒消息（如 `"请读取并执行"`）且遇到任务包白名单漏列同切面支撑文件（`src/plugins/speech-service/`）时，会误以为对面坐着人类用户，直接在后台聊天框里停下来礼貌提问（*“允许我扩大修改范围吗？”*），导致无人值守闭环中断。
-   - **根治方案**：正式将角色协议升级为**双环四重身份**——第一环是唯一面对人类的 **Brain**；第二环是由 `.git/hooks/post-commit` 发送 `[AUTO-WAKEUP]` 机器指令唤醒的无人值守 **Router（Execution Coordinator）**，统领常驻 **Worker** 与独立 **Tester**。明确规定 Router 严禁在后台会话向人类提问等回复：同切面支撑文件漏列由 Router 直接授权 Worker 补齐并重跑 Tester；核心 `core/` 契约冲突则写入 `Status: blocked` 并 `git commit` 退回给 Brain。
+3. **状态去 Session 化 + 算力热驻留（实测 97.75% ~ 98.62% 缓存命中）**
+   - 项目契约与交接状态 100% 落盘于 `docs/HANDOFF.md`（顶部维护 `Status: pending | verified | blocked` 与 `Verified-Commit: <sha>`）；
+   - 下游 Router、Worker 与 Tester 作为常驻热会话（Warm Sessions）跨波次持续复用上下文前缀（实测常驻 Router 缓存命中率达 `98.62%`，常驻 Worker 缓存命中率达 `97.75%`）。

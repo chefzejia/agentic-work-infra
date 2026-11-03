@@ -16,10 +16,10 @@
 
 ### 2. 为什么在执行环必须独立出 `Router（无人值守执行总控）`，而不能只写三角色？
 - **具体失败名称：“后台会话身份迷失（停下来向空气提问）”**。
-- **真实翻车实证（`Pith` Wave 8 实测）**：
-  - 当我们用 `.git/hooks/post-commit` 通过 `codex queue` 把 `"请读取并执行"` 塞进后台常驻的 ChatGPT App / Codex 总控会话时，当时 `docs/ROLES.md` 里只写了 `Brain / Worker / Tester` 三角色；
-  - 独立 Tester 在验收时抓到了一个真 Bug（任务包授权目录只写了 `src/shells/*`，但底层的 `src/plugins/speech-service/neuralSpeech.ts` 写死了默认端点，导致前端新写的设置框不生效）；
-  - Worker 不敢越权改未授权目录，汇报给了后台 Codex 总控。结果后台总控看到自己身处一个聊天窗口、且收到了一条像人说话一样的 `user message`，**它误以为对面坐着人类用户，直接在后台窗口里停下来礼貌提问：*“允许我扩大修改范围，修复 `src/plugins/speech-service/` 吗？”***——导致无人值守闭环当场卡死！
+- **真实翻车机制**：
+  - 当我们用 `.git/hooks/post-commit` 通过队列把自然语言消息（如 `"请读取并执行"`）塞进后台常驻的总控会话时，如果 `docs/ROLES.md` 里只写了 `Brain / Worker / Tester` 三角色；
+  - 一旦独立 Tester 在验收时发现完成本任务目标必须连带修改某个同切面支撑文件（而任务包白名单漏列了该文件），Worker 不敢越权修改并上报给后台总控；
+  - 此时后台总控看到自己身处一个聊天窗口、且刚收到一条 `user message`，**就会误以为对面坐着人类用户，直接在后台窗口里停下来礼貌提问：*“请问允许我扩大修改范围吗？”***——导致无人值守闭环当场卡死在没人看的后台窗口里！
 - **立住 `Router`（第四重身份）的工程收益**：
   - 在 `ROLES.md` 与 Git Hook 唤醒消息（`[AUTO-WAKEUP] 你是无人值守 Execution Router...`）中明确宣告它的无人值守自动机身份：**它的触发源是 Git Hook，对面没有人类在看聊天框，严禁停下提问等待回复**；
   - 赋予 Router 明确的**两级裁决权**：① 若 Tester 发现的问题属于完成本轮任务目标所必需的同切面支撑文件（任务包白名单漏列），Router 直接授权 Worker 补齐修改并重跑 Tester；② 若真正触及上游已冻结的 `core/` 契约冲突或连续 3 轮修复失败，Router 将证据写入 `docs/HANDOFF.md (Status: blocked)` 并 `git commit` 退回给 Brain。
@@ -31,7 +31,7 @@
 
 ### 4. 为什么 `Worker ≠ Tester`（唯一不可妥协的实现与验收隔离）
 - **具体失败名称：“作者给自己发合格证”**。
-- **不可溶解的信息差异**：Worker 在写代码的过程中，上下文里积累了大量“我为什么妥协、我为什么这么实现”的思维惯性。独立的 Tester 会话只看“契约要求什么”和“代码实际跑出来是什么”，没有任何实现包袱（例如在 `Pith` Wave 8 中，正是因为独立 Tester 零包袱审查，才一眼抓出 `sensevoice-local` 自定义端点被忽略的真 Bug，避免了假输入框蒙混过关）。
+- **不可溶解的信息差异**：Worker 在写代码的过程中，上下文里积累了大量“我为什么妥协、我为什么这么实现”的思维惯性。独立的 Tester 会话只看“契约要求什么”和“代码实际跑出来是什么”，没有任何实现包袱，从而保证验收的客观性。
 
 ## Brain 与 Router 如何避免被细节淹没？
 
@@ -54,4 +54,4 @@
 
 DeepSeek Harness 团队在《Super-agent 设计探索：迈向更自主的 Agent 系统》中通过消融实验证明：
 - **单 Session + Subagent 工具的退化陷阱**：在中性提示词下，给单个主 Session 挂载 Subagent 工具跑 20 项工作请求，**5 次实验中有 5 次主模型一次都没调用 Subagent，全在主 Session 里自己硬干**，导致 p95 耗时高达 **29.5 分钟**；而采用 **Router（只分派不干活）+ Worker（隔离执行）** 架构后，p50 降至 **12.4 分钟**、p95 降至 **15.7 分钟**。
-- **订阅直通（省下 37% 读缓存 Token）与算力热驻留**：同一项目连续波次的后续任务直接发往已驻留的具名 Teammate（Warm Router / Worker / Tester），在 `Pith` 真机实测中拿到了 **97.75% ~ 98.62%** 的 KV Prompt Cache 命中率。
+- **订阅直通（省下 37% 读缓存 Token）与算力热驻留**：同一项目连续波次的后续任务直接发往已驻留的具名 Teammate（Warm Router / Worker / Tester），在真机实测中拿到了 **97.75% ~ 98.62%** 的 KV Prompt Cache 命中率。
