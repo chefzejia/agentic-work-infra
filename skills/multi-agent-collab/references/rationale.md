@@ -33,12 +33,16 @@
 - **具体失败名称：“作者给自己发合格证”**。
 - **不可溶解的信息差异**：Worker 在写代码的过程中，上下文里积累了大量“我为什么妥协、我为什么这么实现”的思维惯性。独立的 Tester 会话只看“契约要求什么”和“代码实际跑出来是什么”，没有任何实现包袱，从而保证验收的客观性。
 
-## Brain 与 Router 如何避免被细节淹没？
+## Brain 与 Router 如何避免被细节淹没、避免并发丢单？
 
-保持协调层轻量的三条铁律：
+保持协调层轻量且无竞态的四条铁律：
 1. **看摘要，不看代码**：Brain 与 Router 只读取结构化汇报和 `git log --oneline`，把冗长的代码编辑与测试日志隔离在 Worker / Tester 子会话中（Inline & Spill）。
-2. **契约与状态机驱动控制流**：双环之间仅通过 `docs/HANDOFF.md` 的 `Status: pending | verified | blocked` 状态转换通信。
-3. **状态原地覆盖**：`docs/HANDOFF.md` 只保留当前活跃波次的任务契约，已验收合入的任务立即移出。
+2. **单文件滑动任务栈（In-File Queue）防 ABA 覆盖**：若 `docs/HANDOFF.md` 只维护全局单一的 `Status: pending` 字段，当 Router 正在后台执行 `[Task #N]` 期间，人类与 Brain 讨论出 `[Task #N+1]` 并覆写 `HANDOFF.md`，Router 在 `#N` 结束时大笔一挥改成 `Status: verified` 就会将 `#N+1` 静默覆盖吞掉。因此，`docs/HANDOFF.md` 内每个任务必须作为独立编号区块 `## [Task #N]` 维护各自的 `- **Status**: pending | verified | blocked | superseded`：
+   - **Brain 只追加/标废**：新任务追加在末尾；若推翻未完旧单，将其标为 `superseded (by #N+1)` 并追加新单；且提交时必须用 `git commit --only docs/HANDOFF.md` 防止把后台 Worker 的半成品代码误打包；
+   - **滑动自净（Sliding Window GC）**：文件内仅保留未结案区块 + 最近 1~2 个已结案区块作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史留在 `git log` 中），确保单文件永远轻薄不膨胀。
+3. **Router 精准核销与睡前排空循环（Drain-Loop Before Sleep）**：
+   - Router 在 `#N` 验收通过准备改状态前，先重读 `docs/HANDOFF.md` 确认 `#N` 未被 Brain 标为 `superseded`，然后仅用精确 `edit` 修改 `## [Task #N]` 下的状态行；
+   - **睡前排空自检**：即使 Router 在执行 `#N` 期间因会话处于 Running 状态而错过了外部 Git Hook 对 `#N+1` 的唤醒信号，Router 在提交完 `#N` 的 `verified` 后、结束回合前，**必须再次读取 `docs/HANDOFF.md` 检查是否还有 `Status: pending` 的任务区块**——若有，无需外部二次触发，直接在当前轮次继续执行下一单，直到全文件 `pending` 彻底清零才休眠。
 
 ## 为什么禁止“多子 Agent 同时写小功能”（Performative Parallelism）
 

@@ -33,6 +33,6 @@
      - **Worker（隔离实现）**：同一工作区严格串行（`Write = 1`），防止并发踩踏；
      - **Tester（独立验收）**：消除作者“自我确认”偏见，独立执行静态门禁与动态真机验证。
 
-3. **状态去 Session 化 + 算力热驻留（实测 97.75% ~ 98.62% 缓存命中）**
-   - 项目契约与交接状态 100% 落盘于 `docs/HANDOFF.md`（顶部维护 `Status: pending | verified | blocked` 与 `Verified-Commit: <sha>`）；
-   - 下游 Router、Worker 与 Tester 作为常驻热会话（Warm Sessions）跨波次持续复用上下文前缀（实测常驻 Router 缓存命中率达 `98.62%`，常驻 Worker 缓存命中率达 `97.75%`）。
+3. **状态去 Session 化 + 单文件滑动任务栈（In-File Queue & Drain-Loop）+ 算力热驻留（实测 97.75% ~ 98.62% 缓存命中）**
+   - **单文件滑动任务栈与睡前排空（防并发覆盖与运行中漏触发）**：`docs/HANDOFF.md` 采用独立编号区块 `## [Task #N]` 维护各自的 `- **Status**: pending | verified | blocked | superseded`（仅保留未结案区块 + 最近 1~2 个已结案锚点）。当 Router 正在后台执行 `#N` 期间，Brain 可随时追加 `## [Task #N+1] (pending)`（或将 `#N` 标为 `superseded`）并通过 `git commit --only docs/HANDOFF.md` 隔离提交；Router 结案 `#N` 时仅精确修改 `#N` 的状态行，并在结束回合前强制重读 `docs/HANDOFF.md` 排空所有新增 `pending` 区块（Drain-Loop），彻底根除单槽位覆盖与运行期漏触发；
+   - **常驻热节点复用**：下游 Router、Worker 与 Tester 作为常驻热会话（Warm Sessions）跨波次持续复用上下文前缀（实测常驻 Router 缓存命中率达 `98.62%`，常驻 Worker 缓存命中率达 `97.75%`）。

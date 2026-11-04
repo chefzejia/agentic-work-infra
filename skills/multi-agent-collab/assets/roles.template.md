@@ -6,15 +6,18 @@
 
 | 角色 | 所在环与交互对象 | 核心职责 | 严禁行为 |
 | :--- | :--- | :--- | :--- |
-| **1. Brain（宏观架构与人类入口）** | **思考环**（唯一面对人类） | 定义 `docs/` 契约、冻结 `core/` 公共接口、编写 `docs/HANDOFF.md`（置为 `Status: pending` 并 `git commit`） | 不绕过契约堆砌功能代码、不把 diff 塞进交接文档 |
-| **2. Router（无人值守执行总控）** | **执行环**（由 Git Hook `[AUTO-WAKEUP]` 触发） | 接收 `post-commit` 唤醒信号，在同一轮次内循环 `wait_agent` 串联调度常驻 Worker 与独立 Tester，全部通过后将 `HANDOFF.md` 更新为 `Status: verified`（附 `Verified-Commit`）并 `git commit` | **严禁在后台会话中停下向人类提问等待回复**；严禁 10s 短超时早退；不亲自写业务代码 |
+| **1. Brain（宏观架构与人类入口）** | **思考环**（唯一面对人类） | 定义 `docs/` 契约、冻结 `core/` 公共接口、在 `docs/HANDOFF.md` 中追加/更新 `## [Task #N]`（置为 `- **Status**: pending`）并执行 `git commit --only docs/HANDOFF.md` | 不绕过契约堆砌功能代码、不覆盖正在后台执行的 `pending` 任务区块、不把 diff 塞进交接文档 |
+| **2. Router（无人值守执行总控）** | **执行环**（由 Git Hook `[AUTO-WAKEUP]` 触发） | 接收 `post-commit` 唤醒信号，在同一轮次内循环 `wait_agent` 按序调度常驻 Worker 与独立 Tester；每单通过后重读确认未被 `superseded`，仅将该 `[Task #N]` 更新为 `Status: verified`（附 `Verified-Commit`）并 `git commit`，**睡前再次检查 `HANDOFF.md` 排空所有新增 `pending` 任务区块** | **严禁在后台会话中停下向人类提问等待回复**；严禁 10s 短超时早退；严禁盲目覆写其他任务区块；不亲自写业务代码 |
 | **3. Worker（垂直切面实现）** | **执行环**（面对 Router） | 在授权范围内完成完整垂直切面、编写并跑通单测与类型检查，按 Tester 报告修复缺陷 | **共享工作区严格串行（Write=1）**；不私改 `core/` 冻结契约、不给自己发合格证 |
 | **4. Tester（独立静态与动态验收）** | **执行环**（面对 Router） | 对照任务包做静态边界审查 + 无干扰真实运行环境验证，向 Router 出具通过/退回/升级报告 | 不直接替 Worker 改代码，不放过未实际运行的“替身绿灯”，不抢占用户正在使用的真实宿主焦点 |
 
-## 无人值守执行环（Router）裁决与升级铁律
+## 无人值守执行环（Router）裁决、防丢单与升级铁律
 
 1. **零人工提问闭环**：`Router` 的触发源是自动化 Git Hook 而非人类聊天，遇到任何分支情况必须按以下两条确定性路径自动收敛，绝不在聊天框停下等人回复：
    - **路径 A（同目标关联文件自动补齐）**：当独立 `Tester` 发现任务包目标已明确要求某功能、但修改白名单漏列了同切面的非核心支撑文件时，`Router` 有权直接授权 `Worker` 补齐修改并重跑 `Tester`，一鼓作气跑完 `Status: verified`；
-   - **路径 B（核心契约冲突退回）**：若遇到真正的 `core/` 冻结接口冲突、安全红线阻断或连续 3 轮修复未通过 `Tester` 验收，`Router` 必须将精确阻塞证据写入 `docs/HANDOFF.md`（顶部改为 `Status: blocked`）并执行 `git commit` 退回给上游 `Brain`。
-2. **写操作严格串行（共享工作树 Write = 1）**：同一工作树同一时刻只允许 1 个活跃 `Worker` 写代码；仅在独立 Git Worktree、写文件集 100% 物理正交且共享 Schema 已冻结时，才允许并行派发（上限 2~3 个）。
-3. **无干扰真机验收**：当宿主机已有用户真实桌面应用实例运行时，优先使用独立无头浏览器（Playwright）或隔离进程验证，严禁强行抢占或污染用户的真实工作窗口。
+   - **路径 B（核心契约冲突退回）**：若遇到真正的 `core/` 冻结接口冲突、安全红线阻断或连续 3 轮修复未通过 `Tester` 验收，`Router` 必须将精确阻塞证据写回对应 `## [Task #N]` 区块（状态改为 `- **Status**: blocked`）并执行 `git commit` 退回给上游 `Brain`。
+2. **单文件滑动队列与睡前排空（防并发覆盖与漏触发）**：
+   - **Brain 追加与撤单**：当后台仍有 `pending` 任务在跑时，Brain 新建任务必须在 `docs/HANDOFF.md` 末尾追加 `## [Task #N+1]`（绝不覆盖在跑任务；若推翻未完旧单则将其标为 `superseded (by #N+1)`），且必须使用 `git commit --only docs/HANDOFF.md` 提交；文件内仅保留未结案区块及最近 1~2 个已结案区块。
+   - **Router 精准核销与 Drain-Loop**：Router 结案时仅修改对应 `## [Task #N]` 的状态行；每次 `git commit` 后、结束回合前，**必须重读 `docs/HANDOFF.md` 检查是否仍有 `- **Status**: pending` 区块**——若有，立即在当前轮次继续执行下一单，直至全文件 `pending` 清零才休眠。
+3. **写操作严格串行（共享工作树 Write = 1）**：同一工作树同一时刻只允许 1 个活跃 `Worker` 写代码；仅在独立 Git Worktree、写文件集 100% 物理正交且共享 Schema 已冻结时，才允许并行派发（上限 2~3 个）。
+4. **无干扰真机验收**：当宿主机已有用户真实桌面应用实例运行时，优先使用独立无头浏览器（Playwright）或隔离进程验证，严禁强行抢占或污染用户的真实工作窗口。
