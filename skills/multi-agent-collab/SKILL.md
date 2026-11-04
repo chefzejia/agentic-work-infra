@@ -19,12 +19,12 @@ description: >
      - **滑动自净（Sliding Window GC）**：文件内仅保留所有未结案区块（`pending / blocked`）及最近 `1 ~ 2` 个已结案区块（`verified / superseded`）作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史由 `git log` 保存）。
    - **第二环：无人值守执行环（`.git/hooks/post-commit` $\rightarrow$ Execution Router $\rightarrow$ 常驻 Worker & Tester）**：
      - 通过 Git `post-commit` 钩子监听 `docs/HANDOFF.md` 中存在 `Status: pending` 任务区块的提交，向后台常驻的 **Execution Router（执行总控会话）** 发送带 `[AUTO-WAKEUP]` 标识的机器唤醒指令；
-     - **Router 无人值守铁律（严禁在后台会话向人类提问等待）**：Router 的触发源是自动化 Git 钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！当独立 Tester 抓到 Bug 且属于同一任务目标下的漏列关联文件（如改设置 UI 需同步修对应插件的设置消费逻辑）时，Router **有权直接在任务目标范围内授权 Worker 补齐修改并重跑 Tester**；若遇真正的跨核心（`core/`）契约冲突或连续 3 轮修复未过，Router 必须将阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain。
+     - **Router 无人值守铁律（严禁在后台会话向人类提问等待）**：Router 的触发源是自动化 Git 钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！当独立 Tester 抓到缺陷且属于同一任务目标下的漏列关联文件（且**未触碰任务包明确声明的【不在范围内 / 严禁触碰】黑名单**）时，Router **有权直接在任务目标范围内授权 Worker 补齐修改并重跑 Tester**；若遇真正的跨核心（`core/`）契约冲突、触及黑名单边界或连续 3 轮修复未过，Router 必须将阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain。
      - **精准核销与睡前排空循环铁律（Drain-Loop Before Sleep）**：一旦 Router 被唤醒，必须在当前唤醒周期内**持续等待（循环 `wait_agent`，严禁 10s 短超时早退睡眠）**，串联跑完 `Worker 实现与工程自检 → Tester 模拟真实用户验收 → 重新 read docs/HANDOFF.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 区块更新为 Status: verified（附 Verified-Commit）并 git commit`（严禁覆盖其他任务区块！）；**提交后结束回合前，Router 必须再次检查 `docs/HANDOFF.md` 是否仍存在执行期间由 Brain 新追加的 `Status: pending` 任务区块**——若有，无需等待外部二次唤醒，立即在当前轮次继续按序执行下一单，直至全文件 `pending` 区块彻底清零（Drained）后再休眠。
    - *注：在无需跨宿主的简单单软件项目里，Brain 与 Router 可由同一个主会话兼任（退化为三节点）；一旦拆分为跨窗口/跨宿主双环，必须显式立住 Router 身份。*
-3. **验证维度正交切分（Worker = 工程契约自检 vs. Tester = 模拟真实用户验收）**：
+3. **验证维度正交切分与首轮穷尽（Worker = 工程契约自检 vs. Tester = 模拟真实用户验收 & First-Pass Exhaustive）**：
    - **代码单测与构建门禁归 Worker**：编译、类型检查、单元测试、架构边界守卫（Guard Tests）与产物打包是 Worker 交卷前的**分内前置条件**。严禁把跑代码脚本、写单测或做进程/文件备份检查塞给 Tester。
-   - **Tester 唯一定位是“模拟真实用户（Simulate the Real User）”**：具体怎么验证完全由**产品自身的交付形态**决定（CLI 工具就按用户手册敲真实命令看输出；API 服务就发真实请求验状态流转；GUI/网页/客户端应用就像不懂技术的真实人类用户一样在专用沙盒中点按交互、肉眼审视每一帧截图的排版、位置与文案）。Tester 交付的是**站在真实用户视角的交互证据与体验挑刺**，绝不是重跑一遍 Worker 的测试脚本看 `ok: true`。
+   - **Tester 唯一定位是“模拟真实用户（Simulate the Real User）”且必须“首轮穷尽”**：具体怎么验证完全由**产品自身的交付形态**决定（CLI 工具就按用户手册敲真实命令看输出；API 服务就发真实请求验状态流转；GUI/网页/客户端应用就像不懂技术的真实人类用户一样在专用沙盒中点按交互、肉眼审视每一帧截图的排版、位置与文案）。Tester 必须在**第一轮验收时一次性穷尽该任务切面的全部交互体验、视觉排版与边界缺陷**（严禁“挤牙膏式”每轮只报 1 个毛病把 3 轮封顶额度耗光），绝不能只重跑一遍 Worker 的测试脚本看 `ok: true` 就放行。
 4. **上下文当缓存管（Inline & Spill）与热节点复用**：
    - **Inline & Spill**：Brain 与 Router 只内联（Inline）任务 ID、结论摘要与文件路径锚点，完整细节与证据落盘（Spill）到工作区文件中按需索引。
    - **热节点复用（Warm Teammates）**：Router 在项目周期内持续复用已驻留的具名 Worker 与 Tester 子会话（实测 KV Prompt Cache 命中率可达 97%+），消除每次新建空白会话的冷启动重读税。
@@ -104,11 +104,12 @@ Brain / Router 调度 Worker 与 Tester 时，必须按**读写性质与耦合�
 ```bash
 #!/usr/bin/env bash
 # .git/hooks/post-commit（当本次 commit 修改了 docs/HANDOFF.md 且其中存在 Status: pending 任务区块时秒级唤醒下游 Router）
+# 注：下方唤醒传输命令可按当前使用的 Agent 宿主替换（以下以本地队列 + 后台静默唤醒 URI 为例）
 if git diff-tree --no-commit-id --name-only -r HEAD --root | grep -qx "docs/HANDOFF.md"; then
   if grep -qE "^(- \*\*Status\*\*|Status): pending(\s|$)" docs/HANDOFF.md 2>/dev/null; then
     export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
     codex queue --thread "$CODEX_COORD_THREAD_ID" \
-      --message "[AUTO-WAKEUP] 你是无人值守 Execution Router（非人类交互窗口）。请读取 docs/HANDOFF.md 中所有 Status: pending 的 [Task #N] 任务区块，在同一轮次内循环 wait_agent 按序调度常驻 Worker 与独立 Tester 完成闭环：每完成一单先重读 HANDOFF.md 确认该单未被标为 superseded，再仅将该 [Task #N] 更新为 Status: verified 并 git commit；提交后结束回合前必须再次检查 HANDOFF.md 是否仍有新增的 Status: pending 区块，若有则立即继续执行直至队列彻底排空（若遇同目标漏列支撑文件可直接授权 Worker 补齐；若遇核心契约冲突则将该单标为 Status: blocked），严禁在会话中停下向人类提问等待回复。" >/dev/null 2>&1 || true
+      --message "[AUTO-WAKEUP] 你是无人值守 Execution Router（非人类交互窗口）。请读取 docs/HANDOFF.md 中所有 Status: pending 的 [Task #N] 任务区块，在同一轮次内循环 wait_agent 按序调度常驻 Worker 与独立 Tester 完成闭环：每完成一单先重读 HANDOFF.md 确认该单未被标为 superseded，再仅将该 [Task #N] 更新为 Status: verified 并 git commit；提交后结束回合前必须再次检查 HANDOFF.md 是否仍有新增的 Status: pending 区块，若有则立即继续执行直至队列彻底排空（若遇同目标漏列且未触及严禁修改红线的支撑文件，可直接授权 Worker 补齐；若遇核心契约冲突则将该单标为 Status: blocked），严禁在会话中停下向人类提问等待回复。" >/dev/null 2>&1 || true
     open -g "codex://threads/wake/${CODEX_COORD_THREAD_ID}" >/dev/null 2>&1 || true
   fi
 fi
