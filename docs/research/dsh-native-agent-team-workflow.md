@@ -30,8 +30,8 @@
    - **四重身份职责边界**：
      - **Brain（思考环）**：唯一面对人类的沟通桥梁，负责定义契约并提交 `docs/HANDOFF.md (Status: pending)`；
      - **Router（执行环总控）**：由 Git Hook 发送 `[AUTO-WAKEUP]` 机器指令唤醒，明确宣告其无人值守身份（**严禁在后台会话向人类提问等待回复**）。同切面支撑文件漏列由 Router 直接授权 Worker 补齐并重跑 Tester；核心 `core/` 契约冲突则写入 `Status: blocked` 并 `git commit` 退回给 Brain；
-     - **Worker（隔离实现）**：同一工作区严格串行（`Write = 1`），防止并发踩踏；
-     - **Tester（独立验收）**：消除作者“自我确认”偏见，独立执行静态门禁与动态真机验证。
+     - **Worker（隔离实现与工程自检）**：同一工作区严格串行（`Write = 1`），负责完成代码实现并在交卷前跑通全部编译、类型检查、单元测试与构建门禁；
+     - **Tester（独立模拟真实用户验收）**：消除作者“自我确认”偏见，不替 Worker 写单测或拿脚本 `ok: true` 充数，而是**根据产品形态完全模拟真实人类用户操作产品**（如点按界面并截屏肉眼审视排版、位置与文案体验）。
 
 3. **状态去 Session 化 + 单文件滑动任务栈（In-File Queue & Drain-Loop）+ 算力热驻留（实测 97.75% ~ 98.62% 缓存命中）**
    - **单文件滑动任务栈与睡前排空（防并发覆盖与运行中漏触发）**：`docs/HANDOFF.md` 采用独立编号区块 `## [Task #N]` 维护各自的 `- **Status**: pending | verified | blocked | superseded`（仅保留未结案区块 + 最近 1~2 个已结案锚点）。当 Router 正在后台执行 `#N` 期间，Brain 可随时追加 `## [Task #N+1] (pending)`（或将 `#N` 标为 `superseded`）并通过 `git commit --only docs/HANDOFF.md` 隔离提交；Router 结案 `#N` 时仅精确修改 `#N` 的状态行，并在结束回合前强制重读 `docs/HANDOFF.md` 排空所有新增 `pending` 区块（Drain-Loop），彻底根除单槽位覆盖与运行期漏触发；

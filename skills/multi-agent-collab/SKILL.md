@@ -20,9 +20,12 @@ description: >
    - **第二环：无人值守执行环（`.git/hooks/post-commit` $\rightarrow$ Execution Router $\rightarrow$ 常驻 Worker & Tester）**：
      - 通过 Git `post-commit` 钩子监听 `docs/HANDOFF.md` 中存在 `Status: pending` 任务区块的提交，向后台常驻的 **Execution Router（执行总控会话）** 发送带 `[AUTO-WAKEUP]` 标识的机器唤醒指令；
      - **Router 无人值守铁律（严禁在后台会话向人类提问等待）**：Router 的触发源是自动化 Git 钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！当独立 Tester 抓到 Bug 且属于同一任务目标下的漏列关联文件（如改设置 UI 需同步修对应插件的设置消费逻辑）时，Router **有权直接在任务目标范围内授权 Worker 补齐修改并重跑 Tester**；若遇真正的跨核心（`core/`）契约冲突或连续 3 轮修复未过，Router 必须将阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain。
-     - **精准核销与睡前排空循环铁律（Drain-Loop Before Sleep）**：一旦 Router 被唤醒，必须在当前唤醒周期内**持续等待（循环 `wait_agent`，严禁 10s 短超时早退睡眠）**，串联跑完 `Worker 实现 → Tester 独立真机验收 → 重新 read docs/HANDOFF.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 区块更新为 Status: verified（附 Verified-Commit）并 git commit`（严禁覆盖其他任务区块！）；**提交后结束回合前，Router 必须再次检查 `docs/HANDOFF.md` 是否仍存在执行期间由 Brain 新追加的 `Status: pending` 任务区块**——若有，无需等待外部二次唤醒，立即在当前轮次继续按序执行下一单，直至全文件 `pending` 区块彻底清零（Drained）后再休眠。
+     - **精准核销与睡前排空循环铁律（Drain-Loop Before Sleep）**：一旦 Router 被唤醒，必须在当前唤醒周期内**持续等待（循环 `wait_agent`，严禁 10s 短超时早退睡眠）**，串联跑完 `Worker 实现与工程自检 → Tester 模拟真实用户验收 → 重新 read docs/HANDOFF.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 区块更新为 Status: verified（附 Verified-Commit）并 git commit`（严禁覆盖其他任务区块！）；**提交后结束回合前，Router 必须再次检查 `docs/HANDOFF.md` 是否仍存在执行期间由 Brain 新追加的 `Status: pending` 任务区块**——若有，无需等待外部二次唤醒，立即在当前轮次继续按序执行下一单，直至全文件 `pending` 区块彻底清零（Drained）后再休眠。
    - *注：在无需跨宿主的简单单软件项目里，Brain 与 Router 可由同一个主会话兼任（退化为三节点）；一旦拆分为跨窗口/跨宿主双环，必须显式立住 Router 身份。*
-3. **上下文当缓存管（Inline & Spill）与热节点复用**：
+3. **验证维度正交切分（Worker = 工程契约自检 vs. Tester = 模拟真实用户验收）**：
+   - **代码单测与构建门禁归 Worker**：编译、类型检查、单元测试、架构边界守卫（Guard Tests）与产物打包是 Worker 交卷前的**分内前置条件**。严禁把跑代码脚本、写单测或做进程/文件备份检查塞给 Tester。
+   - **Tester 唯一定位是“模拟真实用户（Simulate the Real User）”**：具体怎么验证完全由**产品自身的交付形态**决定（CLI 工具就按用户手册敲真实命令看输出；API 服务就发真实请求验状态流转；GUI/网页/客户端应用就像不懂技术的真实人类用户一样在专用沙盒中点按交互、肉眼审视每一帧截图的排版、位置与文案）。Tester 交付的是**站在真实用户视角的交互证据与体验挑刺**，绝不是重跑一遍 Worker 的测试脚本看 `ok: true`。
+4. **上下文当缓存管（Inline & Spill）与热节点复用**：
    - **Inline & Spill**：Brain 与 Router 只内联（Inline）任务 ID、结论摘要与文件路径锚点，完整细节与证据落盘（Spill）到工作区文件中按需索引。
    - **热节点复用（Warm Teammates）**：Router 在项目周期内持续复用已驻留的具名 Worker 与 Tester 子会话（实测 KV Prompt Cache 命中率可达 97%+），消除每次新建空白会话的冷启动重读税。
 
@@ -30,8 +33,8 @@ description: >
 | --- | --- | --- | --- | --- |
 | **1. Brain**（宏观架构师） | **思考环**（唯一面对人类） | 承接人类模糊意图、冻结上游 `core/` 契约、向 `HANDOFF.md` 追加/更新 `[Task #N] (Status: pending)` 并执行 `git commit --only docs/HANDOFF.md`、最终审美把关 | **旗舰模型**（最懂人话、全局视野与审美最强） | 不亲自写具体业务代码、不覆盖正在执行的 `pending` 任务区块、不把冗长工具日志灌入主窗口 |
 | **2. Router**（无人值守执行总控） | **执行环**（面对 Git Hook 与子代理） | 接收 `[AUTO-WAKEUP]` 信号、循环 `wait_agent` 串联调度常驻 Worker 与 Tester、精准回写对应 `[Task #N]` 的 `Status: verified / blocked`、**睡前重读 `HANDOFF.md` 排空后续 `pending` 队列** | **次旗舰 / 高稳定性编排模型** | **严禁在后台窗口停下向人类提问等回复**、严禁 10s 短超时早退、严禁覆写其他任务区块、不亲自下场写业务代码 |
-| **3. Worker**（隔离实现层，默认串行） | **执行环**（面对 Router） | 按任务包实现完整垂直切面、编写并跑通单元测试（自反馈）、按 Tester 反馈修复 | **次旗舰 / 高执行力编码模型** | 不直接向人类抢话、不私改 `core/` 冻结契约、不给自己发合格证 |
-| **4. Tester**（独立验收与 Watchdog 层） | **执行环**（面对 Router） | 独立静态审查 + 动态真机验证（Playwright / 原生桌面 CUA 交互取证，不抢占用户正在使用的真实宿主焦点） | **次旗舰 / 强工具与视觉模型** | 不直接替 Worker 改代码、不自创未忽略临时目录污染仓库、不碰用户真实数据 |
+| **3. Worker**（隔离实现与工程自检层） | **执行环**（面对 Router） | 按任务包实现完整垂直切面、**独立跑通全部编译/类型/单测/构建门禁（工程自检）**、按 Tester 反馈修复 | **次旗舰 / 高执行力编码模型** | 不直接向人类抢话、不私改 `core/` 冻结契约、不写脱离真实环境的假 UI 单测、不给自己发最终合格证 |
+| **4. Tester**（独立模拟用户验收层） | **执行环**（面对 Router） | **根据产品形态完全模拟真实用户操作产品**（点界面看截图审美 / 跑真实用户旅程）+ 核对授权边界，向 Router 出具体验与行为验收报告 | **次旗舰 / 强工具与视觉模型** | **严禁替 Worker 写代码或写单测脚本**、严禁把跑代码脚本绿灯当成用户体验通过、不搞过度防御的备份/进程扫描、不碰用户真实生产数据 |
 
 ## 子 Agent 派发与并发配额纪律
 
@@ -54,13 +57,13 @@ Brain / Router 调度 Worker 与 Tester 时，必须按**读写性质与耦合�
   ↓  (.git/hooks/post-commit 发送 [AUTO-WAKEUP] 机器指令，2 秒内静默唤醒)
 🧭 [Router] 无人值守执行总控（单轮循环 wait_agent + 睡前排空循环 Drain-Loop，绝不停下向人提问）
   ├── 按序取出一项 Status: pending 的 [Task #N]
-  ├── 派发 🔨 [Worker] 实现垂直切面 + 单测自检
-  └── 唤醒 🔍 [Tester] 独立审查（阶段1：静态审查 → 阶段2：无干扰动态/真机验证）
+  ├── 派发 🔨 [Worker] 实现垂直切面 + 跑通全部工程自检（编译 / 类型 / 单测 / 构建同步）
+  └── 唤醒 🔍 [Tester] 按产品形态模拟真实用户独立验收（操作真实产品界面/入口 + 视觉与体验审视）
         ├── ✅ 全部通过 → Router 重读 HANDOFF.md 确认 #N 未被 superseded → 仅将 [Task #N] 更新为 Status: verified 并 git commit
         │     └── 🔄 [Drain Check] 再次检查 HANDOFF.md 是否存在新追加的 Status: pending 区块？
         │           ├── 有 → 不退出回合，立即循环执行下一项 [Task #N+1]
         │           └── 无 → 队列排空，回合结束休眠
-        ├── 🔧 实现缺陷或同目标漏列支撑文件 → Router 直接授权 Worker 修复/补齐并重跑 Tester（上限 3 次）
+        ├── 🔧 实现/体验缺陷或同目标漏列支撑文件 → Router 直接授权 Worker 修复/补齐并重跑 Tester（上限 3 次）
         └── ⚠️ 核心契约冲突或连败 3 次 → Router 将证据写回 [Task #N] (Status: blocked) 并 git commit 退回 Brain
 ```
 
@@ -77,17 +80,17 @@ Brain / Router 调度 Worker 与 Tester 时，必须按**读写性质与耦合�
 - **授权范围**：允许修改的文件/目录，只读依赖的模块（若 Tester 发现完成本任务目标必须连带修改同切面支撑文件，Router 可直接授权补齐）
 - **不在范围内**：明确排除的功能与严禁触碰的目录（如 `src/core/` 冻结接口或用户真实数据）
 - **接口与行为契约**：输入、输出、边界条件、错误处理、性能要求
-- **Worker 自检要求**：需覆盖的单元测试场景
-- **Tester 验收标准**：静态安全检查项、集成测试与无干扰真机验证项
+- **Worker 工程自检门禁（交卷前置条件）**：必须跑通的类型检查、单元测试、架构守卫单测与构建命令
+- **Tester 模拟用户验收要求（按产品形态）**：真实用户视角下的操作路径、视觉排版/交互体验检查点与期望观测结果
 ```
 
 ### 2. 验收报告（Tester → Router）
 ```markdown
 # 验收报告：[Task #<N>] <任务名称>
-- **结论**：✅ 通过 | ❌ 实现问题（退回 Worker） | ⚠️ 核心契约冲突（由 Router 标记 blocked 退回 Brain）
-- **静态审查结果**：契约符合度、边界越权检查、安全风险排查
-- **动态验证结果**：集成测试、真实环境/部署核验的实际观测证据
-- **必须修复项**（若为实现问题）：文件路径、行号、复现条件与原因
+- **结论**：✅ 通过 | ❌ 实现或体验问题（退回 Worker） | ⚠️ 核心契约冲突（由 Router 标记 blocked 退回 Brain）
+- **边界核对**：是否触碰未授权核心契约、Worker 工程门禁是否已绿灯
+- **模拟真实用户验收证据**：按产品形态实际操作产品的过程、画面截图审视结论（排版/位置/文案/交互反馈）或真实输出记录
+- **必须修复项**（若为实现/体验问题）：具体现象、违背的用户心智或契约条目、复现路径与对应文件位置
 - **需升级裁定项**（若为核心契约问题）：契约冲突点或架构缺陷说明
 ```
 
@@ -121,12 +124,12 @@ fi
 
 ## 验收清单
 
-- [ ] 四重身份边界清晰：Brain 面向人类定契约，Router 无人值守管闭环，Worker 串行实现，Tester 独立验收
+- [ ] 四重身份边界清晰：Brain 面向人类定契约，Router 无人值守管闭环，Worker 串行实现并完成全部代码/单测门禁，Tester 独立模拟真实用户验收
 - [ ] `docs/HANDOFF.md` 采用 `## [Task #N]` 独立状态区块队列，Brain 使用 `git commit --only docs/HANDOFF.md` 隔离提交，Router 精准核销对应区块并在睡前重读排空全部 `pending` 任务（无覆盖、无漏触发）
 - [ ] Router 收到 `[AUTO-WAKEUP]` 后未在后台窗口停下向人类提问等待，也未发生 10s 短超时早退
 - [ ] 未发生共享工作区多子 Agent 并发写（Write=1），未将同一垂直切面拆成零碎小任务并发派发
-- [ ] 单元测试仅作为 Worker 自检手段，最终放行依据来自 Tester 的独立验收报告（且真机验收未干扰用户正在使用的真实宿主窗口）
-- [ ] 角色定义与宿主工具、特定模型型号解耦
+- [ ] 代码单测与构建门禁已由 Worker 在交卷前跑通；Tester 的最终放行依据来自符合产品形态的真实用户模拟操作与视觉/行为观测证据（而非仅重跑测试脚本看 `ok: true`）
+- [ ] 角色定义与宿主工具、特定模型型号及具体调试框架解耦
 
 ---
 
