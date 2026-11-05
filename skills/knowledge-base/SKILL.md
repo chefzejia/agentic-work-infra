@@ -1,5 +1,6 @@
 ---
 name: knowledge-base
+version: 1.0.0
 description: >
   建设和维护让人和 Agent 共同观测、操作、修正和演化的知识对象，当前以 Markdown 知识库承载。
   当用户要收集资料、整理笔记、查找可复用内容或检查知识状态时使用。

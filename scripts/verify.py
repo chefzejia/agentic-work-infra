@@ -2,15 +2,19 @@
 """Guard test suite for agentic-work-infra.
 
 Checks:
-1. Every directory under `skills/` has a `SKILL.md` with valid YAML frontmatter,
-   non-empty `name` matching the directory name, non-empty `description` (supporting
-   folded `>` / literal `|` scalars), and no duplicate keys.
-2. Every tracked non-template `.md` file has valid inline and reference-style
+1. Root `VERSION` exists and follows strict SemVer (`X.Y.Z`).
+2. Every directory under `skills/` has a `SKILL.md` with valid YAML frontmatter,
+   non-empty `name` matching the directory name, `version` matching root `VERSION`,
+   non-empty `description` (supporting folded `>` / literal `|` scalars), and no
+   duplicate keys.
+3. Every tracked non-template `.md` file has valid inline and reference-style
    relative Markdown links (handling backtick/tilde fences, link titles, and
    heading `#anchor` fragments).
-3. Template files (`*.template.md`) exist only under `skills/*/assets/`, and none
+4. Every file inside `skills/<skill>/` is 100% self-contained: no relative link
+   inside a skill directory may resolve outside that `skills/<skill>/` boundary.
+5. Template files (`*.template.md`) exist only under `skills/*/assets/`, and none
    are named `AGENTS.md` (which could be accidentally auto-loaded by agent hosts).
-4. Tracked files (`git ls-files -z`) contain no `.DS_Store`, `*_backup*`, or `*_old*`
+6. Tracked files (`git ls-files -z`) contain no `.DS_Store`, `*_backup*`, or `*_old*`
    artifacts, and untracked unignored files (`--others --exclude-standard`) are clean.
 """
 
@@ -23,10 +27,22 @@ import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 FENCE_OPEN_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 HEADING_RE = re.compile(r"^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$")
 INLINE_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 REF_DEF_RE = re.compile(r"^ {0,3}\[([^\]]+)\]:\s*(\S+)")
+
+
+def read_root_version(errors: list[str]) -> str:
+    version_file = ROOT / "VERSION"
+    if not version_file.is_file():
+        errors.append("VERSION: missing root VERSION file")
+        return ""
+    ver = version_file.read_text(encoding="utf-8").strip()
+    if not SEMVER_RE.match(ver):
+        errors.append(f"VERSION: '{ver}' is not valid SemVer (expected X.Y.Z)")
+    return ver
 
 
 def strip_fenced_blocks(text: str) -> str:
@@ -51,7 +67,6 @@ def strip_fenced_blocks(text: str) -> str:
 
 
 def github_slug(heading: str) -> str:
-    # Strip inline markdown formatting
     cleaned = re.sub(r"[`*_~]", "", heading)
     cleaned = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", cleaned)
     cleaned = cleaned.strip().lower()
@@ -105,7 +120,6 @@ def parse_simple_frontmatter(fm_text: str, rel: Path, errors: list[str]) -> dict
         key, rest = m.group(1), m.group(2).strip()
         if key in data:
             errors.append(f"{rel}: duplicate YAML frontmatter key '{key}'")
-        # Strip inline comment unless quoted
         if rest and not rest.startswith(("'", '"')) and " #" in rest:
             rest = rest.split(" #", 1)[0].strip()
         if rest.startswith("#"):
@@ -142,7 +156,7 @@ def parse_simple_frontmatter(fm_text: str, rel: Path, errors: list[str]) -> dict
     return data
 
 
-def check_skills_frontmatter(errors: list[str]) -> int:
+def check_skills_frontmatter(expected_version: str, errors: list[str]) -> int:
     skills_dir = ROOT / "skills"
     checked = 0
     for subdir in sorted(p for p in skills_dir.iterdir() if p.is_dir() and not p.name.startswith(".")):
@@ -162,11 +176,18 @@ def check_skills_frontmatter(errors: list[str]) -> int:
             continue
         data = parse_simple_frontmatter(parts[0], rel, errors)
         name_val = data.get("name", "")
+        ver_val = data.get("version", "")
         desc_val = data.get("description", "")
         if not name_val:
             errors.append(f"{rel}: frontmatter 'name' must be non-empty")
         elif name_val != subdir.name:
             errors.append(f"{rel}: frontmatter name '{name_val}' does not match directory '{subdir.name}'")
+        if not ver_val:
+            errors.append(f"{rel}: frontmatter missing 'version'")
+        elif expected_version and ver_val != expected_version:
+            errors.append(
+                f"{rel}: frontmatter version '{ver_val}' does not match root VERSION '{expected_version}'"
+            )
         if not desc_val:
             errors.append(f"{rel}: frontmatter 'description' must be non-empty")
     return checked
@@ -176,14 +197,19 @@ def clean_link_target(raw: str) -> str:
     target = raw.strip()
     if target.startswith("<") and ">" in target:
         return target[1 : target.index(">")].strip()
-    # Strip optional title: path "title" or path 'title'
     m = re.match(r'^(\S+)\s+(?:"[^"]*"|\'[^\']*\')\s*$', target)
     if m:
         return m.group(1)
     return target
 
 
-def validate_target(md_file: Path, rel: Path, raw_target: str, heading_cache: dict[Path, set[str]], errors: list[str]) -> None:
+def validate_target(
+    md_file: Path,
+    rel: Path,
+    raw_target: str,
+    heading_cache: dict[Path, set[str]],
+    errors: list[str],
+) -> None:
     target = clean_link_target(raw_target)
     if (
         not target
@@ -202,6 +228,15 @@ def validate_target(md_file: Path, rel: Path, raw_target: str, heading_cache: di
     if not resolved.exists():
         errors.append(f"{rel}: broken relative link '{raw_target}'")
         return
+    # Enforce self-containment for standalone skill packages:
+    # Any file under `skills/<skill>/` must not link outside `skills/<skill>/`.
+    if len(rel.parts) >= 2 and rel.parts[0] == "skills":
+        skill_root = (ROOT / "skills" / rel.parts[1]).resolve()
+        if not resolved.is_relative_to(skill_root):
+            errors.append(
+                f"{rel}: link '{raw_target}' escapes standalone skill boundary 'skills/{rel.parts[1]}/'"
+            )
+            return
     if sep and frag and resolved.is_file() and resolved.suffix.lower() == ".md":
         if frag.lower() not in collect_headings(resolved, heading_cache):
             errors.append(f"{rel}: broken target anchor '{raw_target}'")
@@ -227,7 +262,12 @@ def check_markdown_and_templates(tracked: list[Path], errors: list[str]) -> int:
             if len(rel.parts) < 4 or rel.parts[0] != "skills" or rel.parts[2] != "assets":
                 errors.append(f"{rel}: template file must reside under skills/<skill>/assets/")
             continue
-        if len(rel.parts) >= 3 and rel.parts[0] == "skills" and rel.parts[2] == "assets" and md_file.name == "AGENTS.md":
+        if (
+            len(rel.parts) >= 3
+            and rel.parts[0] == "skills"
+            and rel.parts[2] == "assets"
+            and md_file.name == "AGENTS.md"
+        ):
             errors.append(f"{rel}: forbidden filename AGENTS.md inside skill assets (use agents.template.md)")
         checked += 1
         body = strip_fenced_blocks(md_file.read_text(encoding="utf-8"))
@@ -262,8 +302,9 @@ def check_hygiene(tracked: list[Path], errors: list[str]) -> None:
 
 def main() -> int:
     errors: list[str] = []
+    root_version = read_root_version(errors)
     tracked = git_tracked_files()
-    skill_count = check_skills_frontmatter(errors)
+    skill_count = check_skills_frontmatter(root_version, errors)
     md_count = check_markdown_and_templates(tracked, errors)
     check_hygiene(tracked, errors)
 
@@ -272,7 +313,9 @@ def main() -> int:
             print(f"FAIL: {err}", file=sys.stderr)
         return 1
 
-    print(f"OK: {skill_count} skills and {md_count} tracked markdown files passed guard checks.")
+    print(
+        f"OK: v{root_version} — {skill_count} self-contained skills and {md_count} tracked markdown files passed guard checks."
+    )
     return 0
 
 

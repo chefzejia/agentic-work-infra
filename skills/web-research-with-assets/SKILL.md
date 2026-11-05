@@ -1,5 +1,6 @@
 ---
 name: web-research-with-assets
+version: 1.0.0
 description: >
   将网页、社交媒体帖子或在线文章转化为带本地关键配图、来源记录和离线 Markdown 的可追溯本地研究包。
   当用户需要深入研究、剪藏网页材料并保留关键视觉证据供后续脱离浏览器使用时触发。

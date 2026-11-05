@@ -20,7 +20,7 @@
 ## 核心约束
 
 1. **工具与协议解耦**：`docs/core/` 与 `skills/` 保持宿主与工具无关；特定软件的 CLI、模型型号与环境配置归入 `docs/research/` 或宿主本地配置。
-2. **Skill 即代码**：每个 Skill 通过 `SKILL.md` 定义可执行步骤与红线，通过 `references/` 自解释设计原理，通过 `assets/` 提供纯净版 `.template.md` 模板（避免使用 `AGENTS.md` 文件名以防被宿主误加载）。
+2. **Skill 即代码（独立自封闭与统一版本）**：每个 Skill 通过 `SKILL.md` 定义可执行步骤与红线（YAML Frontmatter 中的 `version` 必须与根目录 [`VERSION`](VERSION) 严格同步），通过 `references/` 自解释设计原理，通过 `assets/` 提供纯净版 `.template.md` 模板（避免使用 `AGENTS.md` 文件名以防被宿主误加载）；单个 `skills/<name>/` 目录内的相对链接必须 100% 自封闭，不向外逃逸。
 3. **单一事实来源**：修改任何结构或路径时，同步运行下方守卫检查验证全仓 Markdown 链接可解析性与 Frontmatter 契约。外部参考源码放在 `thirdparty/`（已 Git 忽略）。
 
 ## 修改与验证

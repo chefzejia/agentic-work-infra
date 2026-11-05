@@ -1,5 +1,6 @@
 ---
 name: project-governance
+version: 1.0.0
 description: >
   为新项目或现有仓库建立极简、防腐败、按需生长的 Agent 治理文档与目录架构。
   当用户要求初始化项目文档、改造 AGENTS.md、梳理仓库治理规范或清理冗余文档时使用。
@@ -35,7 +36,7 @@ description: >
 | **L0 必选** | `AGENTS.md` | Agent 的边界、验证命令与读取路由 | 任何需要 Agent 协作的仓库起步时 |
 | **L0 必选** | `README.md` | 项目是什么、如何安装与运行 | 任何独立项目起步时 |
 | **L1 演化** | `docs/LESSONS.md` | 踩过什么反直觉的坑、哪条规则待晋升（含 `Seen N×` 计数） | 同一类错误重复发生，需要留存失败证据并在满 3 次时晋升为单测门禁 |
-| **L1 任务栈** | `docs/HANDOFF.md` | 当前未完任务卡在哪、滑动队列中有哪些待办单 | **单 Agent 简单项目仅在跨会话长任务时按需临时建立（收官即删）；启用双环多 Agent 协作（[multi-agent-collab](../multi-agent-collab/SKILL.md)）时作为常驻轻量滑动任务栈**（仅保留未结案区块 + 最近 1~2 个已结案锚点，严禁堆砌历史验收大表，详细验证证据写入 Git Commit Body） |
+| **L1 任务栈** | `docs/HANDOFF.md` | 当前未完任务卡在哪、滑动队列中有哪些待办单 | **单 Agent 简单项目仅在跨会话长任务时按需临时建立（收官即删）；启用双环多 Agent 协作（`multi-agent-collab` Skill）时作为常驻轻量滑动任务栈**（仅保留未结案区块 + 最近 1~2 个已结案锚点，严禁堆砌历史验收大表，详细验证证据写入 Git Commit Body） |
 | **L2 产品** | `docs/PRODUCT.md` | 服务谁、核心模块与交互铁律、明确不做什么 | 面向用户的业务产品（纯底层库/Infra 无需建立） |
 | **L2 契约** | `docs/ARCHITECTURE.md` | 子系统职责、四层 DAG 边界、状态所有权与淘汰方案 | 存在多子系统，或代码签名看不出跨模块契约（超大型仓库可按子系统拆为 `docs/subsystems/*.md`） |
 | **L2 表面** | `docs/DEPLOYMENT.md` | 如何构建、部署、核验与回滚 | 产物需部署到外部环境才生效，且含不可逆风险 |
