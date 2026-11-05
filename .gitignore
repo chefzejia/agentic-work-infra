@@ -1,4 +1,5 @@
 .local/
+.claude/
 .DS_Store
 .workbuddy/
 thirdparty/

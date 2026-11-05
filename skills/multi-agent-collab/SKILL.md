@@ -12,15 +12,15 @@ description: >
 
 1. **角色拆分的唯一依据是“信息差异”与“交互对象差异”，而非“能力差异”**：
    同一个强模型既能写代码也能审代码，但**作者的上下文里包含“我为什么这么写”，会导致验证退化为自我确认**（因此 `Worker ≠ Tester`）；而当采用跨宿主/后台自动执行时，**面对人类聊天的架构会话与面对自动化 Git 钩子的后台总控会话，其交互对象与阻塞语义完全不同**——如果后台总控不知道自己是“无人值守 Router”，收到队列消息时就会误以为对面坐着真人在聊天，遇到授权范围微调就停在后台窗口里向空气提问！因此完整架构包含 **双环四重身份（Brain · Router · Worker · Tester）**。
-2. **双环四重身份与 `HANDOFF.md` 单文件滑动任务栈 + Git Hook 事件驱动（Agent-Agnostic Event-Driven Dual-Loop）**：
+2. **双环四重身份契约（宿主无关）与默认 Git 参考实现（`HANDOFF.md + post-commit`）**：
    - **第一环：宏观思考环（人 $\leftrightarrow$ Thinking Brain）**：人类唯一面对的沟通入口（选用旗舰模型），专注需求碰撞、产品审美与架构决策；定稿后将任务契约以独立编号区块 `## [Task #N] <标题>`（区块内标记 `Status: pending`）写入仓库 `docs/HANDOFF.md`，并执行隔离提交 `git commit --only docs/HANDOFF.md`（严禁把后台 Worker 正在修改的半成品代码误打包进提交）：
-     - **追加排队（In-File Queue）**：若上一轮 `[Task #N-1]` 仍处于 `Status: pending`（后台正在执行），Brain **绝不覆盖或删除 `#N-1`**，直接在文件末尾追加 `## [Task #N]`（`Status: pending`）；
+     - **追加排队（In-File Queue）**：若上一轮 `[Task #N-1]` 仍处于 `Status: pending / in_progress`（后台正在执行），Brain **绝不覆盖或删除 `#N-1`**，直接在文件末尾追加 `## [Task #N]`（`Status: pending`）；
      - **推翻旧单（Supersede）**：若需推翻尚未跑完的 `#N-1`，Brain 将 `## [Task #N-1]` 的状态改为 `Status: superseded (by #N)`，并在下方追加新方案 `## [Task #N]`（`Status: pending`）；
-     - **滑动自净（Sliding Window GC）**：文件内仅保留所有未结案区块（`pending / blocked`）及最近 `1 ~ 2` 个已结案区块（`verified / superseded`）作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史由 `git log` 保存）。
-   - **第二环：无人值守执行环（`.git/hooks/post-commit` $\rightarrow$ Execution Router $\rightarrow$ 常驻 Worker & Tester）**：
-     - 通过 Git `post-commit` 钩子监听 `docs/HANDOFF.md` 中存在 `Status: pending` 任务区块的提交，向后台常驻的 **Execution Router（执行总控会话）** 发送带 `[AUTO-WAKEUP]` 标识的机器唤醒指令；
-     - **Router 无人值守铁律（严禁在后台会话向人类提问等待）**：Router 的触发源是自动化 Git 钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！当独立 Tester 抓到缺陷且属于同一任务目标下的漏列关联文件（且**未触碰任务包明确声明的【不在范围内 / 严禁触碰】黑名单**）时，Router **有权直接在任务目标范围内授权 Worker 补齐修改并重跑 Tester**；若遇真正的跨核心（`core/`）契约冲突、触及黑名单边界或连续 3 轮修复未过，Router 必须将阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain。
-     - **精准核销、Commit Body 永久留痕与睡前排空循环铁律（Drain-Loop Before Sleep）**：一旦 Router 被唤醒，必须在当前唤醒周期内**持续阻塞等待子会话完成（严禁 10s 短超时早退睡眠）**，串联跑完 `Worker 实现与工程自检（含手动破壁验证 Broken by hand, each red 与全仓门禁） → Tester 模拟真实用户验收 → 重新 read docs/HANDOFF.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 区块更新为 Status: verified（附 Verified-Commit）并执行 git commit`（严禁覆盖其他任务区块！）；**由于 `HANDOFF.md` 后续会滑动清理历史区块，结案提交的 Git Commit Body 必须完整记录本次变更的 `Cause & Fix / Tests / Broken by hand, each red / Run / Not tried` 作为永久审计账本**；**提交后结束回合前，Router 必须再次检查 `docs/HANDOFF.md` 是否仍存在执行期间由 Brain 新追加的 `Status: pending` 任务区块**——若有，无需等待外部二次唤醒，立即在当前轮次继续按序执行下一单，直至全文件 `pending` 区块彻底清零（Drained）后再休眠。
+     - **滑动自净（Sliding Window GC）**：文件内仅保留所有未结案区块（`pending / in_progress / blocked`）及最近 `1 ~ 2` 个已结案区块（`verified / superseded`）作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史由 `git log` 保存）。
+   - **第二环：无人值守执行环（单消费者 Router $\rightarrow$ Worker & Tester）**：
+     - 在默认的 Git 事件驱动实现中，本地安装 `.git/hooks/post-commit` 监听**已提交树（`HEAD:docs/HANDOFF.md`）**中存在 `Status: pending` 的任务区块，向**唯一常驻的 Execution Router（单消费者 Single-Consumer）**发送 `[AUTO-WAKEUP]` 机器指令（若宿主不支持常驻会话，也可退化为单次无状态调度器，启动时扫描未结案的 `pending / in_progress` 区块恢复执行）；
+     - **Router 无人值守与显式委托边界（严禁在后台会话向人类提问等待）**：Router 的触发源是自动化钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！**仅当任务包显式勾选/声明允许同切面支撑文件微调、且目标文件未触碰【不在范围内 / 严禁触碰】黑名单时**，Router 才可在任务目标范围内授权 Worker 补齐关联支撑文件并重跑 Tester；若任务包锁定了严格文件白名单、或遇到跨核心（`core/`）契约冲突、或连续 3 轮修复未过，Router 必须将阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain。
+     - **精准认领、Verified-Commit 锚定与睡前排空循环（Claim & Drain-Loop）**：Router 取单时先将该区块改为 `Status: in_progress`（防重入），串联跑完 `Worker 实现代码提交（产出业务代码 Commit，其 Commit Body 完整记录 Why/Cause & Change、Tests、Broken by hand、Run、Not tried） → Tester 针对该业务 Commit 模拟真实用户验收 → Router 重读 HEAD/工作区 docs/HANDOFF.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 更新为 Status: verified，并将 Verified-Commit 精确填写为通过验收的那条业务代码 Commit SHA，再提交状态变更`；**提交后结束回合前，Router 必须再次检查 `docs/HANDOFF.md` 是否仍存在 `Status: pending` 任务区块**——若有则当场继续执行下一单，直至 `pending` 清零后再休眠。
    - *注：在无需跨宿主的简单单软件项目里，Brain 与 Router 可由同一个主会话兼任（退化为三节点）；一旦拆分为跨窗口/跨宿主双环，必须显式立住 Router 身份。*
 3. **验证维度正交切分与首轮穷尽（Worker = 工程契约自检 + 手动破壁 vs. Tester = 模拟真实用户验收 & First-Pass Exhaustive）**：
    - **代码单测、手动破壁与全仓构建门禁归 Worker**：编译、类型检查、全仓单元测试、架构边界守卫（Guard Tests）、**手动破壁验证（`Broken by hand, each red`：手动破坏被测分支确认测试精准报红，杜绝恒真假测试与内部 Mock）**以及产物打包是 Worker 交卷前的**分内前置条件**。严禁把跑代码脚本、写单测或做进程/文件备份检查塞给 Tester。
@@ -105,11 +105,11 @@ Brain / Router 调度 Worker 与 Tester 时，必须按**读写性质与耦合�
 
 ```bash
 #!/usr/bin/env bash
-# .git/hooks/post-commit（当本次 commit 修改了 docs/HANDOFF.md 且其中存在 Status: pending 任务区块时秒级唤醒下游 Router）
-# 注：<wake-router-command> 按项目实际使用的本地队列/守护进程/CLI 协议注入，保持与特定宿主解耦
+# .git/hooks/post-commit（需在本地显式安装并赋予可执行权限；冷启动或异常中断后 Router 启动时亦须扫描 HANDOFF.md 恢复未结案任务）
+# 读取本次已提交树对象 HEAD:docs/HANDOFF.md（而非可能处于半编辑态的工作区文件），唤醒失败时记录日志至 .git/router-wakeup.err
 if git diff-tree --no-commit-id --name-only -r HEAD --root | grep -qx "docs/HANDOFF.md"; then
-  if grep -qE "^(- \*\*Status\*\*|Status): pending(\s|$)" docs/HANDOFF.md 2>/dev/null; then
-    <wake-router-command> "[AUTO-WAKEUP] 你是无人值守 Execution Router（非人类交互窗口）。请读取 docs/HANDOFF.md 中所有 Status: pending 的 [Task #N] 任务区块，在同一轮次内持续等待并按序调度常驻 Worker 与独立 Tester 完成闭环：每完成一单先重读 HANDOFF.md 确认该单未被标为 superseded，再仅将该 [Task #N] 更新为 Status: verified 并执行 git commit（Commit Body 必须包含 Cause & Fix / Tests / Broken by hand, each red / Run / Not tried）；提交后结束回合前必须再次检查 HANDOFF.md 是否仍有新增的 Status: pending 区块，若有则立即继续执行直至队列彻底排空（若遇同目标漏列且未触及严禁修改红线的支撑文件，可直接授权 Worker 补齐；若遇核心契约冲突则将该单标为 Status: blocked），严禁在会话中停下向人类提问等待回复。" >/dev/null 2>&1 || true
+  if git show HEAD:docs/HANDOFF.md 2>/dev/null | grep -qE "^(- \*\*Status\*\*|Status): pending(\s|$)"; then
+    <wake-router-command> "[AUTO-WAKEUP] 你是单消费者无人值守 Execution Router（非人类交互窗口）。请按序认领 docs/HANDOFF.md 中 Status: pending 的 [Task #N]（标为 in_progress），持续等待并串联 Worker（提交业务代码并在 Commit Body 写入 Why/Cause & Change、Tests、Broken by hand、Run、Not tried）与独立 Tester 闭环；通过后重读确认该单未被标为 superseded，将其更新为 Status: verified（Verified-Commit 填通过验收的业务代码 SHA）并 git commit --only docs/HANDOFF.md；睡前再次重读排空新增 pending 区块，严禁向人类提问等待回复。" 2>>.git/router-wakeup.err || echo "[post-commit] wake-router failed, see .git/router-wakeup.err" >&2
   fi
 fi
 ```

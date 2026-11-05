@@ -21,9 +21,9 @@ description: >
    - **垂直高内聚小包与四层单向 DAG（Directory-as-Product & Vertical Subsystems）**：顶层目录直接映射产品核心模块或垂直物理机制（如 `routes`、`masking`、`filelock`），严禁按技术工种建立 `service / handler / repository / util` 水平大泥球；依赖关系遵循**「交互外壳 $\rightarrow$ 业务子系统 $\rightarrow$ 解耦契约桥接包 $\rightarrow$ 零业务底座原语」**四层单向无环图（DAG），在 `main` 入口显式组装依赖，不引入 DI 框架。
    - **核心稳定态与长尾易腐态物理隔离（Core vs. Volatile Edge & Retire Stack）**：高确定性内核（账本、状态机、路由算法、核心 Schema）与高频突变的外部适配层（第三方逆向协议、长尾渠道补丁）必须通过独立子包或插件宿主物理隔离，并用守卫单测锁死单向引用；对维护成本高或合规风险大的长尾内置模块，定期剥离至外部插件并从主仓彻底移除（Retire Stack）。
    - **唯一视觉真源（Single Visual Truth）**：建仓初期高保真原型一旦转入生产组件，即以**生产代码与样式系统（Production-as-Truth）**为唯一演进真源，及时退役早期静态草稿且不再额外维护重复的文字版 `DESIGN.md`（防止 Agent 被过时的早期原型误导）。
-5. **错误复利漏斗（`LESSONS.md` → `Guard Tests`）与 Commit Body 审计账本**：
-   - 吸收 `magpie` 治理精髓：人或 Tester 在复盘/验收中抓到的重复失败模式先记入 `docs/LESSONS.md`（带翻车 Commit 证据与 `Seen N×` 计数）；一旦累计 `Seen 3×` 或属严重事故，立即固化为 `tests/` 下的静态守卫单测（Guard Test）并从 `LESSONS.md` 正文移出。
-   - **纯净现在时文档 + Commit Body 留痕**：文档与注释永远保持现在时态的纯净契约，而每次修改的根因、修复机制、手动破壁测试记录（`Broken by hand, each red`）与未覆盖边界写入 Git Commit Body，供 `git log / git blame` 永久审计。
+5. **错误复利漏斗（`LESSONS.md` → 守卫单测或正式契约）与 Commit Body 审计账本**：
+   - 吸收 `magpie` 治理精髓：人或 Tester 在复盘/验收中抓到的重复失败模式先记入 `docs/LESSONS.md`（带翻车 Commit 证据与 `Seen N×` 计数）；一旦累计 `Seen 3×` 或属严重事故，经人审议后按性质晋升——**凡可机械断言的规则优先固化为 `tests/` 下的静态守卫单测（Guard Test），不可机械断言的语义/流程边界则浓缩写入正式规范或模块契约**，并从 `LESSONS.md` 正文移出。
+   - **纯净现在时文档 + Commit Body 留痕**：文档与注释永远保持现在时态的纯净契约，而每次修改的意图/根因、手动破壁测试记录（`Broken by hand, each red`）与未覆盖边界写入 Git Commit Body，供 `git log / git blame` 永久审计。
 6. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
 
 ## 文档演进梯度（按真实痛点触发）
