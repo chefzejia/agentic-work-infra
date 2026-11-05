@@ -18,10 +18,13 @@ description: >
      - **追加排队（In-File Queue）**：若上一轮 `[Task #N-1]` 仍处于 `Status: pending / in_progress`（后台正在执行），Brain **绝不覆盖或删除 `#N-1`**，直接在文件末尾追加 `## [Task #N]`（`Status: pending`）；
      - **推翻旧单（Supersede）**：若需推翻尚未跑完的 `#N-1`，Brain 将 `## [Task #N-1]` 的状态改为 `Status: superseded (by #N)`，并在下方追加新方案 `## [Task #N]`（`Status: pending`）；
      - **滑动自净（Sliding Window GC）**：文件内仅保留所有未结案区块（`pending / in_progress / blocked`）及最近 `1 ~ 2` 个已结案区块（`verified / superseded`）作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史由 `git log` 保存）。
-   - **第二环：无人值守执行环（单消费者 Router $\rightarrow$ Worker & Tester）**：
+   - **第二环：无人值守执行环（战术总控 Router $\rightarrow$ Worker & Tester，显性问题 100% 自闭环）**：
      - 在默认的 Git 事件驱动实现中，本地安装 `.git/hooks/post-commit` 监听**已提交树（`HEAD:docs/HANDOFF.md`）**中存在 `Status: pending` 的任务区块，向**唯一常驻的 Execution Router（单消费者 Single-Consumer）**发送 `[AUTO-WAKEUP]` 机器指令（若宿主不支持常驻会话，也可退化为单次无状态调度器，启动时扫描未结案的 `pending / in_progress` 区块恢复执行）；
-     - **Router 无人值守与显式委托边界（严禁在后台会话向人类提问等待）**：Router 的触发源是自动化钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！**仅当任务包显式勾选/声明允许同切面支撑文件微调、且目标文件未触碰【不在范围内 / 严禁触碰】黑名单时**，Router 才可在任务目标范围内授权 Worker 补齐关联支撑文件并重跑 Tester；若任务包锁定了严格文件白名单、或遇到跨核心（`core/`）契约冲突、或连续 3 轮修复未过，Router 必须将阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain。
-     - **精准认领、Verified-Commit 锚定与睡前排空循环（Claim & Drain-Loop）**：Router 取单时先将该区块改为 `Status: in_progress`（防重入），串联跑完 `Worker 实现代码提交（产出业务代码 Commit，其 Commit Body 完整记录 Why/Cause & Change、Tests、Broken by hand、Run、Not tried） → Tester 针对该业务 Commit 模拟真实用户验收 → Router 重读 HEAD/工作区 docs/HANDOFF.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 更新为 Status: verified，并将 Verified-Commit 精确填写为通过验收的那条业务代码 Commit SHA，再提交状态变更`；**提交后结束回合前，Router 必须再次检查 `docs/HANDOFF.md` 是否仍存在 `Status: pending` 任务区块**——若有则当场继续执行下一单，直至 `pending` 清零后再休眠。
+     - **Router 是有决断力的现场战术法官（而非无脑传话筒）**：Router 的触发源是自动化钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！当 Tester 打回或 Worker 受阻时，Router 必须当场执行**分诊、记账与战术自愈（显性问题不出执行环，战略冲突才报 Brain）**：
+       1. **现场分诊与战术决断**：凡属**显性工程/体验问题**（实现漏项、交互/排版瑕疵、测试逃逸，或完成任务目标所需的同切面支撑文件漏列且未触碰【不在范围内 / 严禁触碰】黑名单），**一律由 Router 在执行环内直接拍板解决**——动态授权支撑文件、明确指出根因修复方向（若 Worker 连续 2 轮在同一症状打表层补丁，Router 必须介入止损并重定根因重构方案），绝不拿显性 Bug 打扰上游 Brain；
+       2. **执笔 `docs/LESSONS.md` 与 `Seen 3×` 守卫自进化**：只要发生 Tester 打回（说明残次品逃过了 Worker 的自检门禁），**由同时握有“Worker 自检报告”与“Tester 翻车现场”的 Router 亲自在 `docs/LESSONS.md` 中新增或累加该漏检模式（`Seen N×`）**；若某条显性工程规则累计达 `Seen 3×`（或属严重回归），Router 当场指令 Worker 在返工时顺手将其固化为 `tests/` 下的静态架构守卫单测（Guard Test），在执行环内直接完成免疫闭环；
+       3. **战略阻塞升级（`Status: blocked`）**：仅当遇到跨核心（`core/`）冻结契约自相矛盾、需求存在业务价值二义性需人类取舍、或连续 3 轮战术修复仍未通过时，Router 才将完整阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain 裁决。
+     - **精准认领、Verified-Commit 锚定与睡前排空循环（Claim & Drain-Loop）**：Router 取单时先将该区块改为 `Status: in_progress`（防重入），串联跑完 `Worker（开工前必读 LESSONS.md，实现代码并在业务 Commit Body 完整记录 Why/Cause & Change、Tests、Broken by hand、Run、Not tried） → Tester 针对该业务 Commit 模拟真实用户验收（若打回则由 Router 记入 LESSONS.md 并调度 Worker 闭环修复） → Router 重读 HEAD/工作区 docs/HANDOFF.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 更新为 Status: verified，并将 Verified-Commit 精确填写为通过验收的那条业务代码 Commit SHA，再提交状态变更`；**提交后结束回合前，Router 必须再次检查 `docs/HANDOFF.md` 是否仍存在 `Status: pending` 任务区块**——若有则当场继续执行下一单，直至 `pending` 清零后再休眠。
    - *注：在无需跨宿主的简单单软件项目里，Brain 与 Router 可由同一个主会话兼任（退化为三节点）；一旦拆分为跨窗口/跨宿主双环，必须显式立住 Router 身份。*
 3. **验证维度正交切分与首轮穷尽（Worker = 工程契约自检 + 手动破壁 vs. Tester = 模拟真实用户验收 & First-Pass Exhaustive）**：
    - **代码单测、手动破壁与全仓构建门禁归 Worker**：编译、类型检查、全仓单元测试、架构边界守卫（Guard Tests）、**手动破壁验证（`Broken by hand, each red`：手动破坏被测分支确认测试精准报红，杜绝恒真假测试与内部 Mock）**以及产物打包是 Worker 交卷前的**分内前置条件**。严禁把跑代码脚本、写单测或做进程/文件备份检查塞给 Tester。
@@ -32,10 +35,10 @@ description: >
 
 | 角色身份 | 所在环与交互对象 | 职责定位 | 模型选型倾向 | 严禁越界行为 |
 | --- | --- | --- | --- | --- |
-| **1. Brain**（宏观架构师） | **思考环**（唯一面对人类） | 承接人类模糊意图、冻结上游 `core/` 契约、向 `HANDOFF.md` 追加/更新 `[Task #N] (Status: pending)` 并执行 `git commit --only docs/HANDOFF.md`、最终审美把关 | **旗舰模型**（最懂人话、全局视野与审美最强） | 不亲自写具体业务代码、不覆盖正在执行的 `pending` 任务区块、不把冗长工具日志灌入主窗口 |
-| **2. Router**（无人值守执行总控） | **执行环**（面对 Git Hook 与子代理） | 接收 `[AUTO-WAKEUP]` 信号、持续等待并串联调度常驻 Worker 与 Tester、精准回写对应 `[Task #N]` 的 `Status: verified / blocked`、**在 Commit Body 中固化完整验证与破壁账本**、**睡前重读 `HANDOFF.md` 排空后续 `pending` 队列** | **次旗舰 / 高稳定性编排模型** | **严禁在后台窗口停下向人类提问等回复**、严禁 10s 短超时早退、严禁覆写其他任务区块、不亲自下场写业务代码 |
-| **3. Worker**（隔离实现与工程自检层） | **执行环**（面对 Router） | 按任务包实现完整垂直切面、**独立跑通全仓编译/类型/单测/构建门禁并完成手动破壁验证（`Broken by hand, each red`）**、按 Tester 反馈修复 | **次旗舰 / 高执行力编码模型** | 不直接向人类抢话、不私改 `core/` 冻结契约、不写内部 Mock 或脱离真实环境的假单测、不给自己发最终合格证 |
-| **4. Tester**（独立模拟用户验收层） | **执行环**（面对 Router） | **根据产品形态完全模拟真实用户操作产品**（点界面看截图审美 / 跑真实用户旅程）+ 核对授权边界，向 Router 出具体验与行为验收报告 | **次旗舰 / 强工具与视觉模型** | **严禁替 Worker 写代码或写单测脚本**、严禁把跑代码脚本绿灯当成用户体验通过、不搞过度防御的备份/进程扫描、不碰用户真实生产数据 |
+| **1. Brain**（宏观架构师） | **思考环**（唯一面对人类） | 承接人类模糊意图、冻结上游 `core/` 契约、向 `HANDOFF.md` 追加/更新 `[Task #N] (Status: pending)` 并执行 `git commit --only docs/HANDOFF.md`、处理 `blocked` 战略冲突与最终审美终审 | **旗舰模型**（最懂人话、全局视野与审美最强） | 不亲自写具体业务代码、不覆盖正在执行的 `pending` 任务区块、不把冗长工具日志灌入主窗口 |
+| **2. Router**（无人值守战术总控与现场法官） | **执行环**（面对 Git Hook 与子代理） | 接收 `[AUTO-WAKEUP]` 信号、串联调度 Worker 与 Tester；**当 Tester 打回时，现场分诊显性问题、亲自将漏检模式写入 `docs/LESSONS.md`（满 `Seen 3×` 即令 Worker 固化为守卫单测）并直接拍板调度 Worker 闭环自愈**；仅在契约冲突或连败 3 轮时回写 `blocked`；睡前重读排空 `pending` 队列 | **次旗舰 / 强决断力编排模型** | **严禁在后台窗口停下向人类提问等回复**、严禁沦为无脑传话筒拿显性 Bug 打扰 Brain、严禁 10s 短超时早退、严禁覆写其他任务区块、不亲自下场写业务代码 |
+| **3. Worker**（隔离实现与工程自检层） | **执行环**（面对 Router） | 开工前必读 `docs/LESSONS.md`；按任务包实现完整垂直切面、**独立跑通全仓编译/类型/单测/架构守卫单测并完成手动破壁验证（`Broken by hand, each red`）**；按 Router 战术指令修复缺陷或固化新增守卫单测 | **次旗舰 / 高执行力编码模型** | 不直接向人类抢话、不私改 `core/` 冻结契约、不写内部 Mock 或脱离真实环境的假单测、不给自己发最终合格证 |
+| **4. Tester**（独立模拟用户验收层） | **执行环**（面对 Router） | **根据产品形态完全模拟真实用户操作产品**（点界面看截图审美 / 跑真实用户旅程，首轮穷尽挑刺）+ 核对授权边界，向 Router 出具体验与行为验收报告 | **次旗舰 / 强工具与视觉模型** | **严禁替 Worker 写代码或写单测脚本**、严禁把跑代码脚本绿灯当成用户体验通过、不搞过度防御的备份/进程扫描、不碰用户真实生产数据 |
 
 ## 子 Agent 派发与并发配额纪律
 
@@ -56,17 +59,19 @@ Brain / Router 调度 Worker 与 Tester 时，必须按**读写性质与耦合�
 🧠 [Brain] 制定架构契约，向 docs/HANDOFF.md 追加/更新 ## [Task #N] (Status: pending)
    并执行 git commit --only docs/HANDOFF.md（若推翻未完旧单则将其标为 Status: superseded）
   ↓  (.git/hooks/post-commit 发送 [AUTO-WAKEUP] 机器指令，2 秒内静默唤醒)
-🧭 [Router] 无人值守执行总控（单轮持续阻塞等待 + 睡前排空循环 Drain-Loop，绝不停下向人提问）
-  ├── 按序取出一项 Status: pending 的 [Task #N]
-  ├── 派发 🔨 [Worker] 实现垂直切面 + 跑通全仓工程自检与手动破壁验证（Broken by hand, each red）
+🧭 [Router] 无人值守战术总控与现场法官（显性问题执行环自闭环 + 睡前排空 Drain-Loop，绝不停下向人提问）
+  ├── 按序取出一项 Status: pending 的 [Task #N]（标为 in_progress）
+  ├── 派发 🔨 [Worker] 必读 LESSONS.md + 实现垂直切面 + 跑通全仓工程自检与手动破壁验证（Broken by hand, each red）
   └── 唤醒 🔍 [Tester] 按产品形态模拟真实用户独立验收（操作真实产品界面/入口 + 视觉与体验首轮穷尽审视）
         ├── ✅ 全部通过 → Router 重读 HANDOFF.md 确认 #N 未被 superseded → 仅将 [Task #N] 更新为 Status: verified
         │     并执行 git commit（Commit Body 写入 Cause & Fix / Tests / Broken by hand / Run / Not tried）
         │     └── 🔄 [Drain Check] 再次检查 HANDOFF.md 是否存在新追加的 Status: pending 区块？
         │           ├── 有 → 不退出回合，立即循环执行下一项 [Task #N+1]
         │           └── 无 → 队列排空，回合结束休眠
-        ├── 🔧 实现/体验缺陷或同目标漏列支撑文件 → Router 直接授权 Worker 修复/补齐并重跑 Tester（上限 3 次）
-        └── ⚠️ 核心契约冲突或连败 3 次 → Router 将证据写回 [Task #N] (Status: blocked) 并 git commit 退回 Brain
+        ├── 🔧 显性实现/体验缺陷或同目标漏列支撑文件（执行环内部自愈闭环，不打扰 Brain）：
+        │     ├── ① Router 比对“Worker 自检报告”与“Tester 翻车现场”，亲自将漏检模式写入/累加至 docs/LESSONS.md（Seen N×）
+        │     └── ② Router 直接拍板扩权支撑文件、指出根因方向，安排 Worker 修复并补齐回归/守卫单测（满 Seen 3× 强制固化 Guard Test），重跑 Tester（上限 3 次）
+        └── ⚠️ 核心契约冲突、需求二义性或连败 3 次 → Router 将证据写回 [Task #N] (Status: blocked) 并 git commit 退回 Brain
 ```
 
 ## 角色间通信契约（工具无关）
@@ -110,22 +115,22 @@ Brain / Router 调度 Worker 与 Tester 时，必须按**读写性质与耦合�
 # 读取本次已提交树对象 HEAD:docs/HANDOFF.md（而非可能处于半编辑态的工作区文件），唤醒失败时记录日志至 .git/router-wakeup.err
 if git diff-tree --no-commit-id --name-only -r HEAD --root | grep -qx "docs/HANDOFF.md"; then
   if git show HEAD:docs/HANDOFF.md 2>/dev/null | grep -qE "^(- \*\*Status\*\*|Status): pending(\s|$)"; then
-    <wake-router-command> "[AUTO-WAKEUP] 你是单消费者无人值守 Execution Router（非人类交互窗口）。请按序认领 docs/HANDOFF.md 中 Status: pending 的 [Task #N]（标为 in_progress），持续等待并串联 Worker（提交业务代码并在 Commit Body 写入 Why/Cause & Change、Tests、Broken by hand、Run、Not tried）与独立 Tester 闭环；通过后重读确认该单未被标为 superseded，将其更新为 Status: verified（Verified-Commit 填通过验收的业务代码 SHA）并 git commit --only docs/HANDOFF.md；睡前再次重读排空新增 pending 区块，严禁向人类提问等待回复。" 2>>.git/router-wakeup.err || echo "[post-commit] wake-router failed, see .git/router-wakeup.err" >&2
+    <wake-router-command> "[AUTO-WAKEUP] 你是单消费者无人值守 Execution Router（执行环战术总控与现场法官，非人类交互窗口）。请按序认领 docs/HANDOFF.md 中 Status: pending 的 [Task #N]（标为 in_progress），持续等待并串联 Worker（必读 LESSONS.md，提交业务代码并在 Commit Body 写入 Why/Cause & Change、Tests、Broken by hand、Run、Not tried）与独立 Tester 闭环；若 Tester 打回显性实现/体验问题或漏列同切面支撑文件，由你直接将漏检模式写入/累加至 docs/LESSONS.md（满 Seen 3× 令 Worker 顺手固化为 Guard Test）并拍板安排 Worker 修复自愈，绝不拿显性 Bug 打扰 Brain；通过后重读确认该单未被标为 superseded，将其更新为 Status: verified（Verified-Commit 填通过验收的业务代码 SHA）并 git commit --only docs/HANDOFF.md；睡前再次重读排空新增 pending 区块，严禁向人类提问等待回复。" 2>>.git/router-wakeup.err || echo "[post-commit] wake-router failed, see .git/router-wakeup.err" >&2
   fi
 fi
 ```
 
 ## 升级路径与人的介入时机
 
-升级链条固定为：`Worker ↔ Tester ↔ Router → Brain → 人`。
+升级链条固定为：`Worker ↔ Tester ↔ Router（显性问题执行环自闭环） → Brain → 人`。
 
-- **Worker 遇到同目标文件漏列或实现报错**：上报 Router；若属任务目标直接关联的非核心支撑文件，由 **Router 直接拍板授权补齐**并重跑 Tester。
-- **Router 必须退回 Brain（标 `Status: blocked`）**：需要修改上游已冻结的 `core/` 公共契约、涉及破坏性操作、或同一任务连续 3 轮未通过 Tester 验收。
+- **Tester 打回显性实现/体验缺陷或 Worker 遇到同目标支撑文件漏列（不出执行环）**：由 **Router 当场裁决自愈**——Router 比对 Worker 自检与 Tester 翻车现场，亲自在 `docs/LESSONS.md` 记录/递增漏检模式（若累计达 `Seen 3×` 则安排 Worker 顺手写成 `tests/` 守卫单测），直接拍板授权补齐同切面支撑文件、指出根因方向并调度 Worker 重修 + Tester 复验。
+- **Router 必须退回 Brain（标 `Status: blocked`）**：仅当需要修改上游已冻结的 `core/` 公共契约、需求存在业务价值二义性需人类取舍、涉及破坏性操作、或同一任务连续 3 轮战术自愈仍未通过 Tester 验收。
 - **Brain 必须唤醒人**：需要改变项目对外目标/范围、多个技术方案存在业务价值取舍、或收到 `Status: blocked` 需人类做方向裁定。
 
 ## 验收清单
 
-- [ ] 四重身份边界清晰：Brain 面向人类定契约，Router 无人值守管闭环，Worker 串行实现并完成全仓代码/单测门禁与手动破壁验证（`Broken by hand, each red`），Tester 独立模拟真实用户验收
+- [ ] 四重身份边界清晰：Brain 面向人类定契约，Router 担任执行环战术法官（现场分诊显性问题、执笔 `docs/LESSONS.md` 并调度执行环自愈闭环），Worker 串行实现并完成全仓代码/单测门禁与手动破壁验证（`Broken by hand, each red`），Tester 独立模拟真实用户验收
 - [ ] `docs/HANDOFF.md` 采用 `## [Task #N]` 独立状态区块队列，Brain 使用 `git commit --only docs/HANDOFF.md` 隔离提交，Router 精准核销对应区块、在 Commit Body 中留存完整验证账本，并在睡前重读排空全部 `pending` 任务（无覆盖、无漏触发）
 - [ ] Router 收到 `[AUTO-WAKEUP]` 后未在后台窗口停下向人类提问等待，也未发生 10s 短超时早退
 - [ ] 未发生共享工作区多子 Agent 并发写（Write=1），未将同一垂直切面拆成零碎小任务并发派发

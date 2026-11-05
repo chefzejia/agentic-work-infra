@@ -20,9 +20,12 @@
   - 当我们用 `.git/hooks/post-commit` 通过队列把自然语言消息（如 `"请读取并执行"`）塞进后台常驻的总控会话时，如果 `docs/ROLES.md` 里只写了 `Brain / Worker / Tester` 三角色；
   - 一旦独立 Tester 在验收时发现完成本任务目标必须连带修改某个同切面支撑文件（而任务包白名单漏列了该文件），Worker 不敢越权修改并上报给后台总控；
   - 此时后台总控看到自己身处一个聊天窗口、且刚收到一条 `user message`，**就会误以为对面坐着人类用户，直接在后台窗口里停下来礼貌提问：*“请问允许我扩大修改范围吗？”***——导致无人值守闭环当场卡死在没人看的后台窗口里！
-- **立住 `Router`（第四重身份）的工程收益**：
-  - 在 `ROLES.md` 与 Git Hook 唤醒消息（`[AUTO-WAKEUP] 你是无人值守 Execution Router...`）中明确宣告它的无人值守自动机身份：**它的触发源是 Git Hook，对面没有人类在看聊天框，严禁停下提问等待回复**；
-  - 赋予 Router 明确的**两级裁决权**：① 若 Tester 发现的问题属于完成本轮任务目标所必需的同切面支撑文件（任务包白名单漏列），Router 直接授权 Worker 补齐修改并重跑 Tester；② 若真正触及上游已冻结的 `core/` 契约冲突或连续 3 轮修复失败，Router 将证据写入 `docs/HANDOFF.md (Status: blocked)` 并 `git commit` 退回给 Brain。
+- **立住 `Router`（第四重身份：执行环的战术总控与现场法官）的工程收益**：
+  - 在 `ROLES.md` 与 Git Hook 唤醒消息（`[AUTO-WAKEUP] 你是无人值守 Execution Router...`）中明确宣告它的无人值守自动机身份：**它的触发源是 Git Hook，对面没有人类在看聊天框，严禁停下提问等待回复，更严禁沦为无脑传话筒拿显性 Bug 去打扰 Brain**；
+  - 赋予 Router 明确的**战术自愈闭环权与 `LESSONS.md` 执笔权（显性问题不出执行环，战略冲突才报 Brain）**：
+    1. **显性问题现场拍板**：当 Tester 发现实现/体验缺陷或完成本任务目标必需的同切面支撑文件漏列（未触碰禁区黑名单）时，Router 直接扩权支撑文件、指出根因方向（若连续 2 轮在同一症状打表层补丁则由 Router 介入重定根因重构方案），直接调度 Worker 修复并重跑 Tester；
+    2. **执笔 `docs/LESSONS.md` 与 `Seen 3×` 守卫自进化**：Worker 视野局限在局部实现，Tester 视角是纯粹的不懂代码用户，**唯有 Router 同时握有“Worker 自检报告”与“Tester 翻车现场”**。因此每当发生 Tester 打回（说明残次品逃过了 Worker 的自检门禁），由 Router 亲自比对两边信息，将漏检模式写入或累加至 `docs/LESSONS.md (Seen N×)`；一旦某条显性工程规则达 `Seen 3×`，Router 当场指令 Worker 在返工时顺手将其写成 `tests/` 下的静态守卫单测（Guard Test），无需人类熬夜手动巡检即可完成防线自进化；
+    3. **战略冲突升级**：仅当真正触及上游已冻结的 `core/` 契约自相矛盾、需求存在业务价值二义性需人类取舍、或连续 3 轮战术修复仍失败时，Router 才将完整证据写入 `docs/HANDOFF.md (Status: blocked)` 并 `git commit` 退回给 Brain。
   - *注：在无需跨窗口/跨宿主的轻量级单会话场景中，Brain 与 Router 可由同一主会话兼任；一旦采用双环解耦，Brain 与 Router 必须职责分明。*
 
 ### 3. 为什么“工程代码自检”归 `Worker`，而 `Tester` 的唯一定位是“模拟真实用户”？
