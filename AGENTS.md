@@ -5,12 +5,12 @@
 ## 架构与路由
 
 - **底层公理（Why）**：
-  - [人机协同模型](docs/core/agentic-work-model.md) — 共同工作状态、三层分离与人机边界
-  - [AI-Native 第一性原理](docs/core/ai-native-first-principles.md) — 消除“人类带宽妥协层”，回归物理、数学与系统原生最优解
-  - [Skill 设计规范](docs/core/skill-design.md) — Skill 即代码、自解释与迭代漏斗
+  - [人机协同模型](docs/core/agentic-work-model.md) — 控制面透明 vs 执行面黑盒、三层工作状态与人的四个支点（定界·造台·证伪·审美）
+  - [AI-Native 第一性原理](docs/core/ai-native-first-principles.md) — 从代码抽象走向规则抽象、审视旧时代妥协层与跨领域反证门禁
+  - [Skill 设计规范](docs/core/skill-design.md) — Skill 即代码、独立自封闭与迭代漏斗
 - **核心交付（Skills，How）**：
-  - [项目治理](skills/project-governance/SKILL.md) — 极简起步、按痛点裂变的仓库治理与文档模板
-  - [工程与验证纪律](skills/engineering-discipline/SKILL.md) — 工具选择梯度、变更 7 铁律、三面调试与验证分层
+  - [项目治理](skills/project-governance/SKILL.md) — 极简起步、核心与易腐边缘隔离及按需文档模板
+  - [工程与验证纪律](skills/engineering-discipline/SKILL.md) — 实验台先行（Harness-First）、防御式编码、反 Slop 单测与四层单向 DAG
   - [多 Agent 四角色协作](skills/multi-agent-collab/SKILL.md) — 基于信息差异与交互对象隔离的 Brain / Router / Worker / Tester 双环协作协议
   - [知识库协同](skills/knowledge-base/SKILL.md) — 共同知识对象的构建、核对与维护
   - [网页图文研究包](skills/web-research-with-assets/SKILL.md) — 网页/推文离线剪藏、关键配图本地化与证据包构建
