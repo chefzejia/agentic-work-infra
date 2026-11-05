@@ -6,9 +6,15 @@
      3. 保持对外契约不变的内部重构无需修改本文档。
      4. 一律使用现在时态（Present Tense），严禁写推理心路历程、验收打勾清单或 "（已实现！）" 状态词。 -->
 
-## 系统目标与边界
+## 系统目标与四层单向依赖（4-Layer DAG）
 
 <一句话：系统解决什么问题，明确不做什么>
+
+- **垂直分包与四层单向 DAG（严禁水平 `service / util` 大泥球与循环依赖）**：
+  1. **用户交互外壳（Shell）**：`<如 cli / gui / web>` — 互不依赖，仅调用核心业务子系统。
+  2. **核心业务子系统（Core Subsystems）**：`<如 gateway / provider / sessions>` — 高确定性核心状态机与领域逻辑，在 `main` 显式构造函数组装（禁止引入 DI 容器框架）。
+  3. **解耦契约与插件/长尾适配层（Contracts & Volatile Edge）**：`<如 routes / plugin / external-adapters>` — 打破循环依赖的纯接口小包，以及高频突变的第三方渠道/插件宿主（严禁核心包反向 import 长尾插件）。
+  4. **零业务底座原语（Primitives）**：`<如 proc / filelock / edit / testenv>` — 无业务状态的操作系统与算法原语。
 
 ## 子系统薄契约
 

@@ -16,12 +16,14 @@ description: >
    - **架构文档只写代码表达不出的边界，只链符号不抄代码**：`docs/ARCHITECTURE.md`（或大型项目的 `docs/subsystems/*.md`）只记录模块职责、状态流转、失败语义及拒绝过的替代方案（Why not X），并直接链接源码文件与符号名；只要对外契约不变，内部重构无需改文档。
    - **严禁写“心路历程”，一律使用现在时**：注释与文档只写当前生效的契约，删除推导过程、验收打勾清单与 `"（已实现！）"` 等状态标注。
 3. **极简起步，按需裂变**：新项目或小项目只建根 `AGENTS.md`（控制在 50 行内）和 `README.md`，不预设空目录，不跨仓复制静态通用标准。
-4. **斩断冗余中间态（No Bureaucratic Artifacts）**：
+4. **斩断冗余中间态，按变化率物理分层（No Bureaucratic Artifacts & Core vs. Volatile Edge）**：
    - **单份 `docs/PRODUCT.md` 封顶**：产品定位、模块、交互与领域概念内聚于一份文档，不拆散为 `PRD / DOMAIN / TERMS / RFC`。
-   - **代码目录 1:1 映射产品模块（Directory-as-Product）**：源码顶层目录直接以产品核心模块命名。
+   - **垂直高内聚小包与四层单向 DAG（Directory-as-Product & Vertical Subsystems）**：顶层目录直接映射产品核心模块或垂直物理机制（如 `routes`、`masking`、`filelock`），严禁按技术工种建立 `service / handler / repository / util` 水平大泥球；依赖关系遵循**「交互外壳 $\rightarrow$ 业务子系统 $\rightarrow$ 解耦契约桥接包 $\rightarrow$ 零业务底座原语」**四层单向无环图（DAG），在 `main` 入口显式组装依赖，不引入 DI 框架。
+   - **核心稳定态与长尾易腐态物理隔离（Core vs. Volatile Edge & Retire Stack）**：高确定性内核（账本、状态机、路由算法、核心 Schema）与高频突变的外部适配层（第三方逆向协议、长尾渠道补丁）必须通过独立子包或插件宿主物理隔离，并用守卫单测锁死单向引用；对维护成本高或合规风险大的长尾内置模块，定期剥离至外部插件并从主仓彻底移除（Retire Stack）。
    - **唯一视觉真源（Single Visual Truth）**：建仓初期高保真原型一旦转入生产组件，即以**生产代码与样式系统（Production-as-Truth）**为唯一演进真源，及时退役早期静态草稿且不再额外维护重复的文字版 `DESIGN.md`（防止 Agent 被过时的早期原型误导）。
-5. **错误复利漏斗（`LESSONS.md` → `Guard Tests`）**：
+5. **错误复利漏斗（`LESSONS.md` → `Guard Tests`）与 Commit Body 审计账本**：
    - 吸收 `magpie` 治理精髓：人或 Tester 在复盘/验收中抓到的重复失败模式先记入 `docs/LESSONS.md`（带翻车 Commit 证据与 `Seen N×` 计数）；一旦累计 `Seen 3×` 或属严重事故，立即固化为 `tests/` 下的静态守卫单测（Guard Test）并从 `LESSONS.md` 正文移出。
+   - **纯净现在时文档 + Commit Body 留痕**：文档与注释永远保持现在时态的纯净契约，而每次修改的根因、修复机制、手动破壁测试记录（`Broken by hand, each red`）与未覆盖边界写入 Git Commit Body，供 `git log / git blame` 永久审计。
 6. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
 
 ## 文档演进梯度（按真实痛点触发）
@@ -33,11 +35,11 @@ description: >
 | **L0 必选** | `AGENTS.md` | Agent 的边界、验证命令与读取路由 | 任何需要 Agent 协作的仓库起步时 |
 | **L0 必选** | `README.md` | 项目是什么、如何安装与运行 | 任何独立项目起步时 |
 | **L1 演化** | `docs/LESSONS.md` | 踩过什么反直觉的坑、哪条规则待晋升（含 `Seen N×` 计数） | 同一类错误重复发生，需要留存失败证据并在满 3 次时晋升为单测门禁 |
-| **L1 临时** | `docs/HANDOFF.md` | 当前未完任务卡在哪、下一步谁接手 | **仅在无 Issue/PR 追踪的跨天多会话任务中按需建立**；平时优先用 `git log` 表达进度，**严禁在其中堆砌已完成阶段的历史验收大表**，任务收官即可清空或删除 |
+| **L1 任务栈** | `docs/HANDOFF.md` | 当前未完任务卡在哪、滑动队列中有哪些待办单 | **单 Agent 简单项目仅在跨会话长任务时按需临时建立（收官即删）；启用双环多 Agent 协作（[multi-agent-collab](../multi-agent-collab/SKILL.md)）时作为常驻轻量滑动任务栈**（仅保留未结案区块 + 最近 1~2 个已结案锚点，严禁堆砌历史验收大表，详细验证证据写入 Git Commit Body） |
 | **L2 产品** | `docs/PRODUCT.md` | 服务谁、核心模块与交互铁律、明确不做什么 | 面向用户的业务产品（纯底层库/Infra 无需建立） |
-| **L2 契约** | `docs/ARCHITECTURE.md` | 子系统职责、状态所有权、选型理由与淘汰方案 | 存在多子系统，或代码签名看不出跨模块契约（超大型仓库可按子系统拆为 `docs/subsystems/*.md`） |
+| **L2 契约** | `docs/ARCHITECTURE.md` | 子系统职责、四层 DAG 边界、状态所有权与淘汰方案 | 存在多子系统，或代码签名看不出跨模块契约（超大型仓库可按子系统拆为 `docs/subsystems/*.md`） |
 | **L2 表面** | `docs/DEPLOYMENT.md` | 如何构建、部署、核验与回滚 | 产物需部署到外部环境才生效，且含不可逆风险 |
-| **L2 可选** | `docs/DESIGN.md` | 视觉气质、配色排版、禁用风格 | 仅有视觉产出但**尚无可运行原型或统一 `styles.css`** 时 |
+| **L2 可选** | `docs/DESIGN.md` | 视觉气质、配色排版、禁用风格 | 仅有视觉产出但**尚无可运行原型或统一生产 `styles.css`** 时（一旦生产组件成型即退役） |
 | **L3 扩展** | `docs/COMMUNITY.md` | Agent 如何安全审查社区 PR/Issue | 开源项目且由 Agent 参与社区 PR/Issue 预审 |
 | **L3 扩展** | `docs/adr/` | 复杂架构决策的生命周期（`proposed / implemented / rejected`） | 仅当架构决策极多、无法内联在 `ARCHITECTURE.md` 的关键决策章节时才独立建目录 |
 

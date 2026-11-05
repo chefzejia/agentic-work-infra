@@ -25,14 +25,14 @@
      - **内部重构零文档税**：只要子系统对外职责、状态流转和失败契约未变，内部重构不需要改一个字的文档；
      - **现在时态 & 零心路历程**：已合入的文档只用现在时陈述当前契约，严禁保留推理过程（Reasoning Transcripts）、验收打勾清单或 `"（已实现！）"` 等易腐标注。
 
-## 稳定契约 vs 动态状态（给 `HANDOFF.md` 彻底减重）
+## 稳定契约 vs 动态状态（给 `HANDOFF.md` 彻底减重 + Commit Body 留痕）
 
 项目文档按生命周期分为两类，绝不混写：
 
 | 类型 | 包含文档 | 更新频率与方式 |
 | --- | --- | --- |
 | **稳定契约** | `README.md`, `AGENTS.md`, `PRODUCT.md`, `ARCHITECTURE.md`, `DEPLOYMENT.md` | 仅当对外承诺、模块边界、公共接口或部署流程改变时，随代码在**同一个 Commit** 中更新。 |
-| **动态状态** | `LESSONS.md`, `HANDOFF.md`（仅按需临时建立） | **优先用 `git log`、Issue/PR 或目录生命周期（`proposed/ → implemented/`）承载进度**，大多数项目无需常驻 `HANDOFF.md`。仅在跨会话长任务确需交接未完阻塞点时才建 `HANDOFF.md`，且**严禁在其中堆砌已完成阶段的历史验收大表**。 |
+| **动态状态** | `LESSONS.md`, `HANDOFF.md`（单 Agent 按需临时建 / 双环协作作轻量滑动栈） | **单 Agent 项目优先用 `git log` 或 Issue/PR 承载进度**，仅在跨会话长任务需交接阻塞点时临时建 `HANDOFF.md`；**启用双环四重身份协作时，`HANDOFF.md` 作为常驻轻量滑动任务栈（始终只留未结案区块 + 最近 1~2 个已结案锚点）**。严禁在 `HANDOFF.md` 中堆砌历史验收大表，单次修改的根因、破壁测试与运行证据一律写入 **Git Commit Body**。 |
 
 ## 为什么砍掉中间态（RFC / 多份领域碎文档 / 文字版 DESIGN.md）
 

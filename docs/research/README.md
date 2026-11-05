@@ -2,6 +2,8 @@
 
 本目录保存已完成的调研成果，每份文档都带事实核查时间。
 
+> **历史快照声明**：本目录下的文档保留调研当时的原始记录与历史文件名引用（如早期阶段的 `STANDARDS.md`、`agent-governance.md`、`tracks/` 等）。**当前仓库的唯一权威规范与模板以 [`docs/core/`](../core/agentic-work-model.md) 与 [`skills/`](../../AGENTS.md) 为准。**
+
 ## 多 Agent 协作
 
 ### 双环四重身份与去 Session 化工作流设计（最新实践）
