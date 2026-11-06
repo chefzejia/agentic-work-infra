@@ -35,10 +35,11 @@ description: >
 
 | 角色身份 | 所在环与交互对象 | 职责定位 | 模型选型倾向 | 严禁越界行为 |
 | --- | --- | --- | --- | --- |
-| **1. Brain**（宏观架构师） | **思考环**（唯一面对人类） | 承接人类模糊意图、冻结上游公共契约、向 `docs/TASKS.md` 追加/更新 `[Task #N] (Status: pending)` 并执行 `git commit --only docs/TASKS.md`、处理 `blocked` 战略冲突与最终审美终审 | **旗舰模型**（最懂人话、全局视野与审美最强） | 不亲自写具体业务代码、不覆盖正在执行的 `pending / in_progress` 任务区块、不把冗长工具日志灌入主窗口 |
-| **2. Router**（无人值守战术总控与现场法官） | **执行环**（面对 Git Hook 与子代理） | 接收 `[AUTO-WAKEUP]` 信号、管理本仓 `.tmp/worktrees/task-<ID>` 生命周期并串联调度 Worker 与 Tester；**当 Tester 打回时，现场分诊显性问题、亲自将漏检模式写入 `docs/LESSONS.md`（满 `Seen 3×` 即令 Worker 固化为守卫单测）并直接拍板调度 Worker 闭环自愈**；仅在契约冲突或连败 3 轮时回写 `blocked`；睡前重读排空 `pending` 队列 | **次旗舰 / 强决断力编排模型** | **严禁在后台窗口停下向人类提问等回复**、严禁沦为无脑传话筒拿显性 Bug 打扰 Brain、严禁 10s 短超时早退、严禁覆写其他任务区块、不亲自下场写业务代码 |
-| **3. Worker**（隔离实现与秒级工程内环） | **执行环**（面对 Router） | 开工前必读 `docs/LESSONS.md`；在主目录或分配的 `.tmp/worktrees/task-<ID>` 内实现完整垂直切面、**在秒级无头内环独立跑通全仓编译/类型/单测/架构守卫单测并完成手动破壁验证（`Broken by hand`）**；按 Router 战术指令修复缺陷或固化新增守卫单测 | **次旗舰 / 高执行力编码模型** | 不直接向人类抢话、不私改上游冻结契约、不写内部 Mock 或脱离真实环境的假单测、不给自己发最终合格证 |
-| **4. Tester**（独立模拟用户终验外环） | **执行环**（面对 Router） | **根据产品形态完全模拟真实用户操作产品**（点界面看截图审美 / 跑真实用户旅程，首轮穷尽挑刺）+ 核对授权边界，向 Router 出具体验与行为验收报告 | **次旗舰 / 强工具与视觉模型** | **严禁替 Worker 写代码或写单测脚本**、严禁把跑代码脚本绿灯当成用户体验通过、不搞过度防御的备份/进程扫描、不碰用户真实生产数据 |
+| **1. Brain**（宏观架构师） | **思考环**（唯一面对人类） | 承接人类模糊意图、冻结上游公共契约、向 `docs/TASKS.md` 追加/更新 `[Task #N] (Status: pending)` 并执行 `git commit --only docs/TASKS.md`、处理 `blocked` 战略冲突与最终审美终审 | **旗舰模型**（最懂人话、全局视野与审美最强） | 不亲自写具体业务代码、不覆盖正在执行的 `pending` 任务区块、不把冗长工具日志灌入主窗口 |
+| **2. Router**（无人值守战术总控与现场法官） | **执行环**（常驻热会话，面对 Git Hook 与子代理） | 接收 `[AUTO-WAKEUP]` 信号、管理本仓 `.tmp/worktrees/task-<ID>` 生命周期并串联调度 Worker 与 Tester；**当 Tester 打回时，现场分诊显性问题、亲自将漏检模式写入 `docs/LESSONS.md`（满 `Seen 3×` 即令 Worker 固化为守卫单测）并直接拍板调度 Worker 闭环自愈**；仅在契约冲突或连败 3 轮时回写 `blocked`；睡前重读排空 `pending` 队列 | **次旗舰 / 强决断力编排模型** | **严禁在后台窗口停下向人类提问等回复**、严禁为 `in_progress` 单独提交 Git、严禁沦为无脑传话筒拿显性 Bug 打扰 Brain、严禁 10s 短超时早退、不亲自下场写业务代码 |
+| **3. Worker**（隔离实现与秒级工程内环） | **执行环**（常驻热会话，面对 Router） | 开工前必读 `docs/LESSONS.md`；在主目录或分配的 `.tmp/worktrees/task-<ID>` 内实现完整垂直切面、**在秒级无头内环独立跑通全仓编译/类型/单测/架构守卫单测并完成手动破壁验证（`Broken by hand`）**；按 Router 战术指令修复缺陷或固化新增守卫单测 | **次旗舰 / 高执行力编码模型** | 不直接向人类抢话、不私改上游冻结契约、不写内部 Mock 或脱离真实环境的假单测、不给自己发最终合格证 |
+| **4. Tester**（独立模拟用户终验外环） | **执行环**（常驻热会话，面对 Router） | **根据产品形态完全模拟真实用户操作产品**（点界面看截图审美 / 跑真实用户旅程，首轮穷尽挑刺）+ 核对授权边界，向 Router 出具体验与行为验收报告 | **次旗舰 / 强工具与视觉模型** | **严禁替 Worker 写代码或写单测脚本**、严禁把跑代码脚本绿灯当成用户体验通过、不搞过度防御的备份/进程扫描、不碰用户真实生产数据 |
+| **5. Auditor**（周期性逆熵铲屎官） | **逆熵环**（**一次性全新冷会话 Fresh-Context**，由水位线自动触发，跑完即焚） | 当 `TASKS.md` 无 `pending`（空闲）且距 `LESSONS.md` 的 `reviewed-through` 已累积 $\ge 5$ 个非文档代码提交时自动拉起：零历史包袱审查区间 `git log -p`；**以三大实证门槛（破壁不红实证 / 反模式行号实证 / 契约冲突实证）抓假单测、套娃补丁与契约漂移**；推进 `LESSONS.md` 的 `reviewed-through` 水位线；确有铁证屎山时向 `TASKS.md` 追加 `[Task #Audit]` 清创单自动触发 Router 闭环（或贴 `blocked` 纠偏 Brain） | **旗舰 / 高审美与强代码洁癖模型** | **严禁复用旧会话上下文**；**无破壁/行号铁证严禁提主观代码风格建议（代替二次确认，零误报噪音）**；严禁绕过 `TASKS.md` 私自大改业务代码 |
 
 ## 子 Agent 派发、并发配额与多 Worktree 生命周期协议
 
@@ -114,19 +115,39 @@ Brain / Router 调度 Worker 与 Tester 时，按**读写性质与 `Scope` 耦�
 - **需升级裁定项**（若为核心契约问题）：契约冲突点或架构缺陷说明
 ```
 
-### 3. 单文件滑动调度板与 `[AUTO-WAKEUP]` Git Hook 边沿触发协议（`docs/TASKS.md`）
-为实现跨宿主、Agent 无关的全自动触发，同时**彻底根除“多任务队列下 Router 修改 `TASKS.md` 状态时因文件内仍有其他 `pending` 任务而自己触发自己（Infinite Self-Wakeup Recursion）”的致命缺陷**，`docs/TASKS.md` 采用**Diff 边沿触发（Edge-Triggered Hook）+ 零中间态提交 + 睡前排空自检（Drain-Loop）**协议：
-- **独立区块状态（防 ABA 覆盖）**：每个任务拥有独立标题 `## [Task #N] <标题>` 与各自的状态行（`- **Status**: pending | verified | blocked | superseded`）。Brain 追加新任务时只新增 `## [Task #N+1]`（严禁删改正在执行的 `#N`），Router 结案时仅用 `edit` 更新对应 `## [Task #N]` 下的状态行（严禁全文件盲目覆写，且**严禁在取单时为 `in_progress` 单独执行 `git commit`**）。
-- **Diff 边沿触发（防 Router 自激递归）**：`.git/hooks/post-commit` 使用 `git diff-tree --no-commit-id -p HEAD -- docs/TASKS.md | grep -qE "^\+(- \*\*Status\*\*|Status): pending(\s|$)"`，**仅当本次提交的 Diff 新增行（`+`）中出现了 `Status: pending`（即 Brain 新派发了任务）时才发送唤醒指令**。当 Router 将某项任务从 `pending` 改为 `verified` 或 `blocked` 并提交时，哪怕文件下方还躺着其他未执行的 `pending` 任务，由于本次 Diff 的新增行只有 `+ - **Status**: verified/blocked` 而无 `+ ... pending`，钩子 100% 不触发，彻底斩断自激死循环！
-- **撤单语义（`Status: superseded`）**：若人类与 Brain 决定推翻正在执行或尚未执行的 `#N`，Brain 将 `[Task #N]` 状态改为 `superseded (by #N+1)` 并追加新区块 `[Task #N+1] (pending)`；Router 在结案前重读文件，若发现当前任务已变为 `superseded`，立即终止该任务验收（若在临时 Worktree 中则直接销毁该 Worktree）并转入 `#N+1`。
-- **隔离提交（`git commit --only docs/TASKS.md`）**：Brain 提交任务单时必须加 `--only docs/TASKS.md`，防止将共享工作区内 Worker 改到一半的半成品代码误打包提交。
-- **睡前排空自检（Drain-Loop，防运行中漏触发）**：即使 Router 在运行期间因会话忙而错过了新提交的外部唤醒信号，Router 在将 `#N` 标记为 `verified` 并提交后、结束回合前，**必须重新读取 `docs/TASKS.md` 检查是否仍有 `Status: pending` 区块**，若有则当场继续执行直至彻底排空。
+### 3. 单文件滑动调度板、`[AUTO-WAKEUP]` 边沿触发与 `[AUTO-AUDIT]` 周期性逆熵铲屎协议
+为实现跨宿主、Agent 无关的全自动触发，同时**根除 Router 自激递归**并**自动铲除跨多轮任务累积的慢性屎山与长会话腐化**，`.git/hooks/post-commit` 采用**快慢双分支闭环**协议：
+- **分支 1（快车道 · Diff 边沿触发常驻 Router）**：仅当本次提交的 Diff 新增行（`+`）中出现了 `Status: pending`（即 Brain 或 Auditor 新派发了任务）时才唤醒常驻热 `Router`。当 Router 将某项任务从 `pending` 改为 `verified` 或 `blocked` 并提交时，因无新增 `pending` 行，钩子 100% 不触发，彻底斩断自激死循环！
+- **分支 2（慢车道 · 水位线触发一次性全新冷会话 `Auditor`）**：
+  - **为什么需要非热驻留的 `Auditor`？** 常驻 `Brain` 与 `Router` 会随长会话上下文膨胀而妥协腐化，且单任务视角抓不住跨多轮叠加的“套娃补丁、假测试、职责膨胀”。因此，当 **① `docs/TASKS.md` 已无任何 `Status: pending` 任务（队列排空、主工作树空闲）**，且 **② 距离 `docs/LESSONS.md` 首行 `<!-- reviewed-through: <sha> -->` 水位线已累积 $\ge 5$ 个非 `docs/` 的代码提交（约 3~4 个完成的业务任务）** 时，`post-commit` 自动在后台拉起一个**100% 全新空白上下文（Fresh-Context，跑完即焚）的 `Auditor` 进程**。
+  - **用「三大实证门槛」代替臃肿的二次审批（Proof over Second-Approval）**：为防止 Auditor 瞎挑刺制造假阳性噪音，又不引入“审批 Auditor 的官僚角色”，规定 **Auditor 严禁提主观代码风格/命名建议，仅允许在握有以下三类硬实证之一时立项**：
+    1. **破壁不红实证（假测试）**：现场注释或改反被测核心业务分支后运行测试，测试竟然依然 `PASS`（附具体文件名、行号与命令）；
+    2. **反模式行号实证（表层补丁）**：精确指出 `filepath:line` 存在 `fnBase` 同名重赋值套娃、`readFile` 抠源码字符串跑假测试、固定 `sleep` 碰运气等异步、或同类 Sibling 漏改；
+    3. **契约冲突实证（包括纠偏 Brain）**：精确指出代码实现（或 Brain 写的任务包）与 `ARCHITECTURE.md / PRODUCT.md` 某章节自相矛盾。
+  - **自动收敛出口（零人工干预闭环）**：Auditor 审完后将 `docs/LESSONS.md` 首行的 `reviewed-through` 推进至当前 `HEAD`（水位差归零，天然防死循环）：若代码健康，仅执行 `git commit --only docs/LESSONS.md` 静默收工；若抓到实证屎山，则在 `docs/TASKS.md` 末尾追加 `## [Task #Audit-<N>] 自动审计清创：<实证缺陷与根因重构要求>`（`Status: pending`）并提交——**该提交因新增了 `+Status: pending`，会在同一秒自动触发【分支 1】唤醒常驻 `Router -> Worker -> Tester` 把屎山彻底铲平并验收！**
 
 ```bash
 #!/usr/bin/env bash
-# .git/hooks/post-commit（边沿触发：仅当本次 commit 在 docs/TASKS.md 的 diff 中【新增】了 Status: pending 行时才唤醒 Router，杜绝 Router 结案提交时自激递归）
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# 【分支 1：快车道（Diff 边沿触发）】仅当本次 commit 在 docs/TASKS.md 的 diff 中【新增】了 Status: pending 行时，秒级唤醒常驻热 Router
 if git diff-tree --no-commit-id -p HEAD --root -- docs/TASKS.md 2>/dev/null | grep -qE "^\+(- \*\*Status\*\*|Status): pending(\s|$)"; then
   <wake-router-command> "[AUTO-WAKEUP] 你是单消费者无人值守 Execution Router（执行环战术总控与现场法官，非人类交互窗口）。请按序读取 docs/TASKS.md 中所有 Status: pending 的 [Task #N]（严禁为 in_progress 单独执行 git commit；若多任务 Scope 正交或主目录正忙于 Tester 验收，可开启 .tmp/worktrees/task-<N> 并行派发 Worker 并在单测通过后变基合回主干销毁 Worktree），持续等待并串联 Worker（必读 LESSONS.md，完成秒级内环自检与手动破壁验证）与独立 Tester 闭环；若 Tester 打回显性实现/体验问题或漏列同切面支撑文件，由你直接将漏检模式写入/累加至 docs/LESSONS.md（满 Seen 3× 令 Worker 顺手固化为 Guard Test）并拍板安排 Worker 修复自愈，绝不拿显性 Bug 打扰 Brain；通过后重读确认该单未被标为 superseded，仅将其更新为 Status: verified（Verified-Commit 填通过验收的业务代码 SHA）并 git commit --only docs/TASKS.md；睡前再次重读排空所有剩余 pending 区块，严禁向人类提问等待回复。" 2>>.git/router-wakeup.err || echo "[post-commit] wake-router failed, see .git/router-wakeup.err" >&2
+  exit 0
+fi
+
+# 【分支 2：慢车道（水位线触发一次性全新冷会话 Auditor）】当 TASKS.md 已无任何 pending（队列排空），且距 LESSONS.md 的 reviewed-through 已累积 >= 5 个非 docs 代码提交时，后台自动拉起全新上下文 Auditor 铲屎
+if ! git show HEAD:docs/TASKS.md 2>/dev/null | grep -qE "^(- \*\*Status\*\*|Status): pending(\s|$)"; then
+  LAST_SHA=$(sed -n 's/.*reviewed-through: \([0-9a-f]\{7,40\}\).*/\1/p' docs/LESSONS.md 2>/dev/null | head -n 1)
+  if [ -n "$LAST_SHA" ] && git cat-file -e "${LAST_SHA}^{commit}" 2>/dev/null; then
+    DELTA=$(git rev-list --count "${LAST_SHA}..HEAD" -- . ":!docs/" 2>/dev/null || echo 0)
+    if [ "${DELTA:-0}" -ge "${AUDIT_COMMIT_THRESHOLD:-5}" ] && mkdir .git/auditor.lock 2>/dev/null; then
+      nohup bash -c '
+        trap "rmdir .git/auditor.lock 2>/dev/null" EXIT
+        <spawn-fresh-auditor-command> "[AUTO-AUDIT] 你是一次性全新上下文的独立代码审计官（Fresh-Context Auditor，详见 docs/ROLES.md）。请审查 git log -p '"$LAST_SHA"'..HEAD -- . \":!docs/\" 的所有代码与测试变更：1) 严格按三大实证门槛排查：① 假单测/恒真测试（抽样手动破坏被测业务分支确认测试是否报红，恢复代码后记录改坏仍 PASS 的铁证）、② 表层套娃与反模式补丁（fnBase 重赋值套娃、抠源码字符串假测试、固定 sleep 等异步、漏改同构 Sibling）、③ 模块越界与架构契约漂移（含 Brain 任务契约自身的失误）；无确凿物理/行号实证严禁提主观代码风格建议；2) 将 docs/LESSONS.md 首行的 reviewed-through 更新为当前 HEAD SHA（并记录新发现的失败模式）；3) 若抓到确凿实证屎山，在 docs/TASKS.md 末尾追加 ## [Task #Audit] 自动审计清创任务（Status: pending，写明文件路径、行号实证与根因重构契约）并执行 git commit --only docs/LESSONS.md docs/TASKS.md（若无实证缺陷则仅执行 git commit --only docs/LESSONS.md）。"
+      ' >>.git/auditor.log 2>&1 &
+    fi
+  fi
 fi
 ```
 

@@ -22,8 +22,9 @@ description: >
    - **垂直高内聚小包与单向无环依赖（Directory-as-Product & Acyclic DAG）**：顶层目录直接映射产品核心模块或垂直物理机制，严禁按技术工种建立 `service / handler / repository / util` 水平大泥球；包间依赖遵循单向无环图（DAG，具体分层拓扑由各项目 `ARCHITECTURE.md` 定义：纯逻辑内核与底座原语下沉、外部适配与交互外壳上浮），在 `main` 入口显式组装依赖，不引入 DI 框架。
    - **核心稳定态与长尾易腐态物理隔离（Core vs. Volatile Edge & Retire Stack）**：高确定性内核（账本、状态机、路由算法、核心 Schema）与高频突变的外部适配层（第三方逆向协议、长尾渠道补丁）必须通过独立子包或插件宿主物理隔离，并用守卫单测锁死单向引用；对维护成本高或合规风险大的长尾内置模块，定期剥离至外部插件并从主仓彻底移除（Retire Stack）。
    - **唯一视觉真源（Single Visual Truth）**：建仓初期高保真原型一旦转入生产组件，即以**生产代码与样式系统（Production-as-Truth）**为唯一演进真源，及时退役早期静态草稿且不再额外维护重复的文字版 `DESIGN.md`（防止 Agent 被过时的早期原型误导）。
-5. **错误复利漏斗（`LESSONS.md` → 守卫单测或正式契约）与 Commit Body 审计账本**：
-   - 吸收 `magpie` 治理精髓并嵌入双环四角色工作流：**平时一次通过的任务零额外开销；一旦独立 Tester（或人类）在验收中打回（说明残次品逃过了 Worker 的自检门禁），由同时掌握“Worker 自检报告”与“Tester 翻车现场”的 Router（单会话下为主控）亲自将该漏检模式记入 `docs/LESSONS.md`（带翻车 Commit 证据与 `Seen N×` 计数）**；一旦累计 `Seen 3×` 或属严重事故，对于显性工程规则，Router 直接安排 Worker 在返工时顺手固化为 `tests/` 下的静态守卫单测（Guard Test），不可机械断言的语义/流程边界则经 Brain/人审议后浓缩写入正式契约，并从 `LESSONS.md` 正文移出。
+5. **错误复利漏斗（`LESSONS.md` → 守卫单测或正式契约）、周期性逆熵审计（`Auditor`）与 Commit Body 审计账本**：
+   - **日常现场记账（Router）**：平时一次通过的任务零额外开销；一旦独立 Tester 在验收中打回（说明残次品逃过了 Worker 的自检门禁），由同时掌握“Worker 自检报告”与“Tester 翻车现场”的 Router 亲自将该漏检模式记入 `docs/LESSONS.md`（带翻车 Commit 证据与 `Seen N×` 计数）；一旦累计 `Seen 3×` 或属严重事故，Router 直接安排 Worker 在返工时顺手固化为 `tests/` 下的静态守卫单测（Guard Test）。
+   - **周期性逆熵审计（Fresh-Context Auditor，阈值 = 5 个非文档代码提交）**：当 `docs/TASKS.md` 无 `pending`（空闲），且距 `docs/LESSONS.md` 首行 `<!-- reviewed-through: <sha> -->` 已累积 $\ge 5$ 个非 `docs/` 代码提交时，`.git/hooks/post-commit` 自动在后台拉起**一次性全新空白上下文（Fresh-Context）的 `Auditor`**，以三大硬实证门槛（手动破壁仍 PASS 的假单测实证 / 套娃补丁行号实证 / 契约冲突实证）审查区间代码 Diff，推进 `reviewed-through` 水位线，并将确有铁证的清创任务追加进 `docs/TASKS.md` 自动触发 `Router -> Worker -> Tester` 闭环铲平。
    - **纯净现在时文档 + Commit Body 留痕**：文档与注释永远保持现在时态的纯净契约，而每次修改的意图/根因、破壁验证证据与未覆盖边界按需写入 Git Commit Body，供 `git log / git blame` 永久审计。
 6. **两级任务漏斗（海量外部 Triage vs. 仓内活跃调度板 `docs/TASKS.md`）**：
    - **第一级（仓外/边缘分诊漏斗 Triage）**：当面对数百上千个外部 Issues、PR 或零散反馈时，绝不直接灌入仓库 Markdown 制造噪音；原始反馈留在外部平台或 `.tmp/triage/` 中，由只读分诊（Triage）批量去重、聚类归并、筛除缺复现步骤或触碰安全红线的噪音；
