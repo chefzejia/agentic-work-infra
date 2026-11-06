@@ -10,8 +10,8 @@
   - [Skill 设计规范](docs/core/skill-design.md) — Skill 即代码、独立自封闭与迭代漏斗
 - **核心交付（Skills，How）**：
   - [项目治理](skills/project-governance/SKILL.md) — 极简起步、核心与易腐边缘隔离及按需文档模板
-  - [工程与验证纪律](skills/engineering-discipline/SKILL.md) — 实验台先行（Harness-First）、防御式编码、反 Slop 单测与四层单向 DAG
-  - [多 Agent 四角色协作](skills/multi-agent-collab/SKILL.md) — 基于信息差异与交互对象隔离的 Brain / Router / Worker / Tester 双环协作协议
+  - [工程与验证纪律](skills/engineering-discipline/SKILL.md) — 双速调试与实验台先行（Harness-First）、防御式编码、反 Slop 单测与垂直单向 DAG
+  - [多 Agent 四角色协作](skills/multi-agent-collab/SKILL.md) — 基于信息差异与交互对象隔离的 Brain / Router / Worker / Tester 双环协作与多 Worktree 并行协议
   - [知识库协同](skills/knowledge-base/SKILL.md) — 共同知识对象的构建、核对与维护
   - [网页图文研究包](skills/web-research-with-assets/SKILL.md) — 网页/推文离线剪藏、关键配图本地化与证据包构建
 - **调研归档（Lab）**：

@@ -19,13 +19,16 @@ description: >
 3. **极简起步，按需裂变**：新项目或小项目只建根 `AGENTS.md`（控制在 50 行内）和 `README.md`，不预设空目录，不跨仓复制静态通用标准。
 4. **斩断冗余中间态，按变化率物理分层（No Bureaucratic Artifacts & Core vs. Volatile Edge）**：
    - **单份 `docs/PRODUCT.md` 封顶**：产品定位、模块、交互与领域概念内聚于一份文档，不拆散为 `PRD / DOMAIN / TERMS / RFC`。
-   - **垂直高内聚小包与四层单向 DAG（Directory-as-Product & Vertical Subsystems）**：顶层目录直接映射产品核心模块或垂直物理机制（如 `routes`、`masking`、`filelock`），严禁按技术工种建立 `service / handler / repository / util` 水平大泥球；依赖关系遵循**「交互外壳 $\rightarrow$ 业务子系统 $\rightarrow$ 解耦契约桥接包 $\rightarrow$ 零业务底座原语」**四层单向无环图（DAG），在 `main` 入口显式组装依赖，不引入 DI 框架。
+   - **垂直高内聚小包与单向无环依赖（Directory-as-Product & Acyclic DAG）**：顶层目录直接映射产品核心模块或垂直物理机制，严禁按技术工种建立 `service / handler / repository / util` 水平大泥球；包间依赖遵循单向无环图（DAG，具体分层拓扑由各项目 `ARCHITECTURE.md` 定义：纯逻辑内核与底座原语下沉、外部适配与交互外壳上浮），在 `main` 入口显式组装依赖，不引入 DI 框架。
    - **核心稳定态与长尾易腐态物理隔离（Core vs. Volatile Edge & Retire Stack）**：高确定性内核（账本、状态机、路由算法、核心 Schema）与高频突变的外部适配层（第三方逆向协议、长尾渠道补丁）必须通过独立子包或插件宿主物理隔离，并用守卫单测锁死单向引用；对维护成本高或合规风险大的长尾内置模块，定期剥离至外部插件并从主仓彻底移除（Retire Stack）。
    - **唯一视觉真源（Single Visual Truth）**：建仓初期高保真原型一旦转入生产组件，即以**生产代码与样式系统（Production-as-Truth）**为唯一演进真源，及时退役早期静态草稿且不再额外维护重复的文字版 `DESIGN.md`（防止 Agent 被过时的早期原型误导）。
 5. **错误复利漏斗（`LESSONS.md` → 守卫单测或正式契约）与 Commit Body 审计账本**：
    - 吸收 `magpie` 治理精髓并嵌入双环四角色工作流：**平时一次通过的任务零额外开销；一旦独立 Tester（或人类）在验收中打回（说明残次品逃过了 Worker 的自检门禁），由同时掌握“Worker 自检报告”与“Tester 翻车现场”的 Router（单会话下为主控）亲自将该漏检模式记入 `docs/LESSONS.md`（带翻车 Commit 证据与 `Seen N×` 计数）**；一旦累计 `Seen 3×` 或属严重事故，对于显性工程规则，Router 直接安排 Worker 在返工时顺手固化为 `tests/` 下的静态守卫单测（Guard Test），不可机械断言的语义/流程边界则经 Brain/人审议后浓缩写入正式契约，并从 `LESSONS.md` 正文移出。
-   - **纯净现在时文档 + Commit Body 留痕**：文档与注释永远保持现在时态的纯净契约，而每次修改的意图/根因、手动破壁测试记录（`Broken by hand, each red`）与未覆盖边界写入 Git Commit Body，供 `git log / git blame` 永久审计。
-6. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
+   - **纯净现在时文档 + Commit Body 留痕**：文档与注释永远保持现在时态的纯净契约，而每次修改的意图/根因、破壁验证证据与未覆盖边界按需写入 Git Commit Body，供 `git log / git blame` 永久审计。
+6. **两级任务漏斗（海量外部 Triage vs. 仓内活跃调度板 `docs/TASKS.md`）**：
+   - **第一级（仓外/边缘分诊漏斗 Triage）**：当面对数百上千个外部 Issues、PR 或零散反馈时，绝不直接灌入仓库 Markdown 制造噪音；原始反馈留在外部平台或 `.tmp/triage/` 中，由只读分诊（Triage）批量去重、聚类归并、筛除缺复现步骤或触碰安全红线的噪音；
+   - **第二级（仓内活跃任务调度板 `docs/TASKS.md`）**：只有经 Brain 确认近期真正立项执行的活跃任务（含各自的写作用域 `Scope` 与验收契约），才进入仓库的 `docs/TASKS.md` 进行单文件滑动队列与多 Worktree 并行调度。
+7. **单一事实来源**：每类事实只有一个维护位置，其他文档通过链接路由。索引只负责指路，不维护第二份阶段摘要。
 
 ## 文档演进梯度（按真实痛点触发）
 
@@ -36,9 +39,9 @@ description: >
 | **L0 必选** | `AGENTS.md` | Agent 的边界、验证命令与读取路由 | 任何需要 Agent 协作的仓库起步时 |
 | **L0 必选** | `README.md` | 项目是什么、如何安装与运行 | 任何独立项目起步时 |
 | **L1 演化** | `docs/LESSONS.md` | 踩过什么反直觉的坑、哪条规则待晋升（含 `Seen N×` 计数） | 同一类错误重复发生，需要留存失败证据并在满 3 次时晋升为单测门禁 |
-| **L1 任务栈** | `docs/HANDOFF.md` | 当前未完任务卡在哪、滑动队列中有哪些待办单 | **单 Agent 简单项目仅在跨会话长任务时按需临时建立（收官即删）；启用双环多 Agent 协作（`multi-agent-collab` Skill）时作为常驻轻量滑动任务栈**（仅保留未结案区块 + 最近 1~2 个已结案锚点，严禁堆砌历史验收大表，详细验证证据写入 Git Commit Body） |
+| **L1 调度板** | `docs/TASKS.md` | 当前活跃队列有哪些待办单、各自写作用域（`Scope`）与状态是什么 | **单 Agent 简单项目仅在跨会话长任务时按需临时建立（收官即删）；启用双环多 Agent 协作（`multi-agent-collab` Skill）时作为常驻轻量滑动调度板**（仅保留未结案区块 + 最近 1~2 个已结案锚点，严禁堆砌历史验收大表，详细验证证据写入 Git Commit Body） |
 | **L2 产品** | `docs/PRODUCT.md` | 服务谁、核心模块与交互铁律、明确不做什么 | 面向用户的业务产品（纯底层库/Infra 无需建立） |
-| **L2 契约** | `docs/ARCHITECTURE.md` | 子系统职责、四层 DAG 边界、状态所有权与淘汰方案 | 存在多子系统，或代码签名看不出跨模块契约（超大型仓库可按子系统拆为 `docs/subsystems/*.md`） |
+| **L2 契约** | `docs/ARCHITECTURE.md` | 子系统职责、单向 DAG 边界、状态所有权与淘汰方案 | 存在多子系统，或代码签名看不出跨模块契约（超大型仓库可按子系统拆为 `docs/subsystems/*.md`） |
 | **L2 表面** | `docs/DEPLOYMENT.md` | 如何构建、部署、核验与回滚 | 产物需部署到外部环境才生效，且含不可逆风险 |
 | **L2 可选** | `docs/DESIGN.md` | 视觉气质、配色排版、禁用风格 | 仅有视觉产出但**尚无可运行原型或统一生产 `styles.css`** 时（一旦生产组件成型即退役） |
 | **L3 扩展** | `docs/COMMUNITY.md` | Agent 如何安全审查社区 PR/Issue | 开源项目且由 Agent 参与社区 PR/Issue 预审 |
@@ -58,7 +61,7 @@ description: >
 - **按需路由**：指向实际存在的 `docs/*.md` 或子模块入口，不存在的文档绝不留死链。
 
 ### 3. 剥离动态状态与历史噪音
-- 把散落在 `README.md` 或 `AGENTS.md` 里的“当前待办、阶段进度、测试数量”移出：需要跨会话交接的放入 `docs/HANDOFF.md`（用完即覆盖，不追加完成日志），已完成的直接删除（交由 Git 历史留存）。
+- 把散落在 `README.md` 或 `AGENTS.md` 里的“当前待办、阶段进度、测试数量”移出：需要跨会话调度或交接的放入 `docs/TASKS.md`（用完即滑动清理，不追加完成日志），已完成的直接删除（交由 Git 历史留存）。
 - 把历史调研、一次性会话指令移出默认读取路径。
 
 ### 4. 按触发条件补充契约文档

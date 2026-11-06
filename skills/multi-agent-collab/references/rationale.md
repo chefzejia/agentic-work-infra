@@ -12,7 +12,7 @@
 
 ### 1. 为什么在宏观层 `Brain = Architect`（必须合并）
 - **上下文同构**：宏观协调者与架构师需要完全相同的上下文——项目目标、产品审美、模块边界与关键技术决策。
-- **唯一人类入口**：人只盯这 1 个窗口，和旗舰模型做高密度的思想碰撞，定稿后写入 `docs/HANDOFF.md (Status: pending)` 并 `git commit`。
+- **唯一人类入口**：人只盯这 1 个窗口，和旗舰模型做高密度的思想碰撞，定稿后写入 `docs/TASKS.md (Status: pending)` 并执行 `git commit --only docs/TASKS.md`。
 
 ### 2. 为什么在执行环必须独立出 `Router（无人值守执行总控）`，而不能只写三角色？
 - **具体失败名称：“后台会话身份迷失（停下来向空气提问）”**。
@@ -25,7 +25,7 @@
   - 赋予 Router 明确的**战术自愈闭环权与 `LESSONS.md` 执笔权（显性问题不出执行环，战略冲突才报 Brain）**：
     1. **显性问题现场拍板**：当 Tester 发现实现/体验缺陷或完成本任务目标必需的同切面支撑文件漏列（未触碰禁区黑名单）时，Router 直接扩权支撑文件、指出根因方向（若连续 2 轮在同一症状打表层补丁则由 Router 介入重定根因重构方案），直接调度 Worker 修复并重跑 Tester；
     2. **执笔 `docs/LESSONS.md` 与 `Seen 3×` 守卫自进化**：Worker 视野局限在局部实现，Tester 视角是纯粹的不懂代码用户，**唯有 Router 同时握有“Worker 自检报告”与“Tester 翻车现场”**。因此每当发生 Tester 打回（说明残次品逃过了 Worker 的自检门禁），由 Router 亲自比对两边信息，将漏检模式写入或累加至 `docs/LESSONS.md (Seen N×)`；一旦某条显性工程规则达 `Seen 3×`，Router 当场指令 Worker 在返工时顺手将其写成 `tests/` 下的静态守卫单测（Guard Test），无需人类熬夜手动巡检即可完成防线自进化；
-    3. **战略冲突升级**：仅当真正触及上游已冻结的 `core/` 契约自相矛盾、需求存在业务价值二义性需人类取舍、或连续 3 轮战术修复仍失败时，Router 才将完整证据写入 `docs/HANDOFF.md (Status: blocked)` 并 `git commit` 退回给 Brain。
+    3. **战略冲突升级**：仅当真正触及上游已冻结的公共契约自相矛盾、需求存在业务价值二义性需人类取舍、或连续 3 轮战术修复仍失败时，Router 才将完整证据写入 `docs/TASKS.md (Status: blocked)` 并 `git commit` 退回给 Brain。
   - *注：在无需跨窗口/跨宿主的轻量级单会话场景中，Brain 与 Router 可由同一主会话兼任；一旦采用双环解耦，Brain 与 Router 必须职责分明。*
 
 ### 3. 为什么“工程代码自检”归 `Worker`，而 `Tester` 的唯一定位是“模拟真实用户”？
@@ -45,22 +45,25 @@
 
 保持协调层轻量且无竞态的四条铁律：
 1. **看摘要，不看代码**：Brain 与 Router 只读取结构化汇报和 `git log --oneline`，把冗长的代码编辑与测试日志隔离在 Worker / Tester 子会话中（Inline & Spill）。
-2. **单文件滑动任务栈（In-File Queue）防 ABA 覆盖**：若 `docs/HANDOFF.md` 只维护全局单一的 `Status: pending` 字段，当 Router 正在后台执行 `[Task #N]` 期间，人类与 Brain 讨论出 `[Task #N+1]` 并覆写 `HANDOFF.md`，Router 在 `#N` 结束时大笔一挥改成 `Status: verified` 就会将 `#N+1` 静默覆盖吞掉。因此，`docs/HANDOFF.md` 内每个任务必须作为独立编号区块 `## [Task #N]` 维护各自的 `- **Status**: pending | verified | blocked | superseded`：
-   - **Brain 只追加/标废**：新任务追加在末尾；若推翻未完旧单，将其标为 `superseded (by #N+1)` 并追加新单；且提交时必须用 `git commit --only docs/HANDOFF.md` 防止把后台 Worker 的半成品代码误打包；
+2. **单文件滑动调度板（`docs/TASKS.md`）防 ABA 覆盖**：若调度文件只维护全局单一的 `Status: pending` 字段，当 Router 正在后台执行 `[Task #N]` 期间，人类与 Brain 讨论出 `[Task #N+1]` 并覆写文件，Router 在 `#N` 结束时大笔一挥改成 `Status: verified` 就会将 `#N+1` 静默覆盖吞掉。因此，`docs/TASKS.md` 内每个任务必须作为独立编号区块 `## [Task #N]` 维护各自的 `- **Status**: pending | in_progress | verified | blocked | superseded` 与 `- **Scope**: ...`：
+   - **Brain 只追加/标废**：新任务追加在末尾；若推翻未完旧单，将其标为 `superseded (by #N+1)` 并追加新单；且提交时必须用 `git commit --only docs/TASKS.md` 防止把后台 Worker 的半成品代码误打包；
    - **滑动自净（Sliding Window GC）**：文件内仅保留未结案区块 + 最近 1~2 个已结案区块作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史留在 `git log` 中），确保单文件永远轻薄不膨胀。
 3. **Router 精准核销与睡前排空循环（Drain-Loop Before Sleep）**：
-   - Router 在 `#N` 验收通过准备改状态前，先重读 `docs/HANDOFF.md` 确认 `#N` 未被 Brain 标为 `superseded`，然后仅用精确 `edit` 修改 `## [Task #N]` 下的状态行；
-   - **睡前排空自检**：即使 Router 在执行 `#N` 期间因会话处于 Running 状态而错过了外部 Git Hook 对 `#N+1` 的唤醒信号，Router 在提交完 `#N` 的 `verified` 后、结束回合前，**必须再次读取 `docs/HANDOFF.md` 检查是否还有 `Status: pending` 的任务区块**——若有，无需外部二次触发，直接在当前轮次继续执行下一单，直到全文件 `pending` 彻底清零才休眠。
+   - Router 在 `#N` 验收通过准备改状态前，先重读 `docs/TASKS.md` 确认 `#N` 未被 Brain 标为 `superseded`，然后仅用精确 `edit` 修改 `## [Task #N]` 下的状态行；
+   - **睡前排空自检**：即使 Router 在执行 `#N` 期间因会话处于 Running 状态而错过了外部 Git Hook 对 `#N+1` 的唤醒信号，Router 在提交完 `#N` 的 `verified` 后、结束回合前，**必须再次读取 `docs/TASKS.md` 检查是否还有 `Status: pending` 的任务区块**——若有，无需外部二次触发，直接在当前轮次继续执行下一单，直到全文件 `pending` 彻底清零才休眠。
 
-## 为什么禁止“多子 Agent 同时写小功能”（Performative Parallelism）
+## 为什么禁止“同一目录多子 Agent 碎任务并发”，而用“仓库内 `.tmp/worktrees/` 流水线重叠与正交并行”？
 
-很多支持子 Agent 的宿主默认倾向于将一个小需求拆成 3~5 个子任务并发派发。这种“表演式并发”在工程实践中效率极低，原因在于四重隐性税：
+很多支持子 Agent 的宿主默认倾向于在**同一个目录**下将一个小需求拆成 3~5 个碎任务并发派发。这种“同目录表演式并发”在工程实践中效率极低，原因在于四重隐性税：
 1. **冷启动重复阅读税（N × Context Tax）**：每个子 Agent 醒来都要重新读取同一批基础文件，Token 消耗翻 $N$ 倍。
 2. **共享工作区踩踏（Workspace Contention）**：多个写操作子 Agent 在同一工作树并发改代码时，会互相覆盖公共入口，且一个子 Agent 的半成品代码会导致另一个子 Agent 的单测报错。
 3. **语义撕裂与缝合税（Integration Tax）**：同一个业务切面被拆给互不通气的多个子 Agent 后，主控花在排查冲突和缝合上的时间远超直接串行写完。
 4. **指令序列化开销**：写几百字 Prompt 交代上下文的时间往往比主会话直接执行 3 次 `edit` 慢数倍。
 
-因此，**写操作默认串行（单工作区 Write = `1`）**；只有当**写集合 100% 物理正交 + 共享契约已提前冻结 + 独立 Worktree 隔离**时，才允许按完整垂直模块并行派发 `2 ~ 3` 个 Worker。
+**真正的提速之道是「仓库内局部 Worktree（`<repo>/.tmp/worktrees/task-<ID>`）+ 流水线重叠（Pipelining）」**：
+- **单任务零开销**：队列只有 1 个任务且主目录空闲时，直接在主工作树执行（Write = `1`）；
+- **流水线重叠（验 `#N` 与写 `#N+1` 同时进行）**：当 Tester 正在主工作树耗时做真实界面视觉验收 `Task #N` 时，若队列里已有 `Task #N+1`，Router 立即在本仓库 `.tmp/worktrees/task-<N+1>` 下创建隔离工作树（软链复用 `node_modules/.venv`），让 Worker 同时开工写 `#N+1`，彻底消灭等待 Tester 的空窗期；
+- **正交切面多路并行（2~3 路封顶）**：当 `docs/TASKS.md` 中存在多个 `Scope`（写文件集）100% 物理正交且上游共享契约已冻结的完整垂直任务时，Router 为每单分配独立的 `.tmp/worktrees/task-<ID>` 并行开发，待 Worker 各自跑通秒级内环单测后由 Router 变基快进合回 `main`（`git rebase main && git merge --ff-only`）并立即 `git worktree remove --force` 销毁临时目录，做到多项目互不串台、用完零残留。
 
 ## 理论溯源：DeepSeek《Super-agent 设计探索》的消融实验印证
 

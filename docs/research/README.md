@@ -12,7 +12,7 @@
 
 **核心结论**：
 - **区分“状态去 Session 化”与“算力热驻留”**：项目的长期状态与契约必须落盘在工作区文件中（不锁死在聊天窗口），但执行多波次任务的 Router/Worker/Tester 节点应作为**常驻热队友（Warm Teammates）**持续复用，以保有 97%+ 的 KV Prompt Cache 命中率。
-- **双环四重身份（Brain · Router · Worker · Tester）与 Git Hook 事件驱动**：人类只面对唯一的主窗口（Brain）定契约并提交 `HANDOFF.md (Status: pending)`，通过 8 行 `.git/hooks/post-commit` 秒级拍醒下游无人值守 Router 串联常驻 Worker 与独立 Tester 闭环。
+- **双环四重身份（Brain · Router · Worker · Tester）与 Git Hook 事件驱动**：人类只面对唯一的主窗口（Brain）定契约并提交 `TASKS.md (Status: pending)`，通过 `.git/hooks/post-commit` 秒级拍醒下游无人值守 Router 管理 `.tmp/worktrees/` 串联常驻 Worker 与独立 Tester 闭环。
 
 ---
 
