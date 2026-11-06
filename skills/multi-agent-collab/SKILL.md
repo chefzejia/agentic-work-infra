@@ -15,16 +15,16 @@ description: >
    同一个强模型既能写代码也能审代码，但**作者的上下文里包含“我为什么这么写”，会导致验证退化为自我确认**（因此 `Worker ≠ Tester`）；而当采用跨宿主/后台自动执行时，**面对人类聊天的架构会话与面对自动化 Git 钩子的后台总控会话，其交互对象与阻塞语义完全不同**——如果后台总控不知道自己是“无人值守 Router”，收到队列消息时就会误以为对面坐着真人在聊天，遇到授权范围微调就停在后台窗口里向空气提问！因此完整架构包含 **双环四重身份（Brain · Router · Worker · Tester）**。
 2. **双环四重身份契约（宿主无关）与默认 Git 参考实现（`TASKS.md + post-commit`）**：
    - **第一环：宏观思考环（人 $\leftrightarrow$ Thinking Brain）**：人类唯一面对的沟通入口（选用旗舰模型），专注需求碰撞、产品审美与架构决策（当面对海量外部 Issues/PR 时，先经仓外 Triage 聚类去重，仅将近期确认立项的活跃任务放入调度板）；定稿后将任务契约以独立编号区块 `## [Task #N] <标题>`（标记 `Status: pending` 与写作用域 `Scope`）写入仓库 `docs/TASKS.md`，并执行隔离提交 `git commit --only docs/TASKS.md`（严禁把后台 Worker 正在修改的半成品代码误打包进提交）：
-     - **追加排队（In-File Queue）**：若上一轮 `[Task #N-1]` 仍处于 `Status: pending / in_progress`（后台正在执行），Brain **绝不覆盖或删除 `#N-1`**，直接在文件末尾追加 `## [Task #N]`（`Status: pending`）；
+     - **追加排队（In-File Queue）**：若上一轮 `[Task #N-1]` 仍处于 `Status: pending`（后台正在执行），Brain **绝不覆盖或删除 `#N-1`**，直接在文件末尾追加 `## [Task #N]`（`Status: pending`）；
      - **推翻旧单（Supersede）**：若需推翻尚未跑完的 `#N-1`，Brain 将 `## [Task #N-1]` 的状态改为 `Status: superseded (by #N)`，并在下方追加新方案 `## [Task #N]`（`Status: pending`）；
-     - **滑动自净（Sliding Window GC）**：文件内仅保留所有未结案区块（`pending / in_progress / blocked`）及最近 `1 ~ 2` 个已结案区块（`verified / superseded`）作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史由 `git log` 保存）。
+     - **滑动自净（Sliding Window GC）**：文件内仅保留所有未结案区块（`pending / blocked`）及最近 `1 ~ 2` 个已结案区块（`verified / superseded`）作为上下文锚点，更早的已结案区块在追加新单时顺手移出（完整历史由 `git log` 保存）。
    - **第二环：无人值守执行环（战术总控 Router $\rightarrow$ Worker & Tester，显性问题 100% 自闭环）**：
-     - 在默认的 Git 事件驱动实现中，本地安装 `.git/hooks/post-commit` 监听**已提交树（`HEAD:docs/TASKS.md`）**中存在 `Status: pending` 的任务区块，向**唯一常驻的 Execution Router（单消费者 Single-Consumer）**发送 `[AUTO-WAKEUP]` 机器指令（若宿主不支持常驻会话，也可退化为单次无状态调度器，启动时扫描未结案的 `pending / in_progress` 区块恢复执行）；
+     - **边沿触发防自激递归（Diff Edge-Trigger Only）**：`.git/hooks/post-commit` **仅检测本次 Commit 的 Diff 新增行是否引入了 `+\s*(- \*\*Status\*\*|Status): pending`**（而非检查全文件是否残留 `pending`）！这样只有当上游 Brain 新派发 `pending` 任务时才会触发唤醒；当 Router 在多任务队列中结案 `#N`（将 `#N` 从 `pending` 改为 `verified / blocked`）并提交时，即使文件内 `#N+1` 仍是 `pending`，因本次 Diff 并未新增 `pending` 行，钩子 100% 静默忽略，**从物理上彻底根绝“Router 提交 `TASKS.md` 自己再次唤醒自己”的无限递归**！
      - **Router 是有决断力的现场战术法官（而非无脑传话筒）**：Router 的触发源是自动化钩子而非人类聊天，**绝对禁止在后台会话里停下来向人类提问等待回复**！当 Tester 打回或 Worker 受阻时，Router 必须当场执行**分诊、记账与战术自愈（显性问题不出执行环，战略冲突才报 Brain）**：
        1. **现场分诊与战术决断**：凡属**显性工程/体验问题**（实现漏项、交互/排版瑕疵、测试逃逸，或完成任务目标所需的同切面支撑文件漏列且未触碰【不在范围内 / 严禁触碰】黑名单），**一律由 Router 在执行环内直接拍板解决**——动态授权支撑文件、明确指出根因修复方向（若 Worker 连续 2 轮在同一症状打表层补丁，Router 必须介入止损并重定根因重构方案），绝不拿显性 Bug 打扰上游 Brain；
        2. **执笔 `docs/LESSONS.md` 与 `Seen 3×` 守卫自进化**：只要发生 Tester 打回（说明残次品逃过了 Worker 的自检门禁），**由同时握有“Worker 自检报告”与“Tester 翻车现场”的 Router 亲自在 `docs/LESSONS.md` 中新增或累加该漏检模式（`Seen N×`）**；若某条显性工程规则累计达 `Seen 3×`（或属严重回归），Router 当场指令 Worker 在返工时顺手将其固化为 `tests/` 下的静态架构守卫单测（Guard Test），在执行环内直接完成免疫闭环；
-       3. **战略阻塞升级（`Status: blocked`）**：仅当遇到上游冻结的公共契约/核心层自相矛盾、需求存在业务价值二义性需人类取舍、或连续 3 轮战术修复仍未通过时，Router 才将完整阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit` 退回给上游 Brain 裁决。
-     - **精准认领、Verified-Commit 锚定与睡前排空循环（Claim & Drain-Loop）**：Router 取单时先将该区块改为 `Status: in_progress`（防重入），串联跑完 `Worker（开工前必读 LESSONS.md，在秒级内环完成代码与破壁自检并在业务 Commit Body 记录意图/根因与验证证据） → Tester 针对该业务 Commit 模拟真实用户终验（若打回则由 Router 记入 LESSONS.md 并调度 Worker 闭环修复） → Router 重读 HEAD/工作区 docs/TASKS.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 更新为 Status: verified，并将 Verified-Commit 精确填写为通过验收的那条业务代码 Commit SHA，再提交状态变更`；**提交后结束回合前，Router 必须再次检查 `docs/TASKS.md` 是否仍存在 `Status: pending` 任务区块**——若有则当场继续执行下一单，直至 `pending` 清零后再休眠。
+       3. **战略阻塞升级（`Status: blocked`）**：仅当遇到上游冻结的公共契约/核心层自相矛盾、需求存在业务价值二义性需人类取舍、或连续 3 轮战术修复仍未通过时，Router 才将完整阻塞证据写回对应 `[Task #N]` 区块（更新为 `Status: blocked`）并 `git commit --only docs/TASKS.md` 退回给上游 Brain 裁决。
+     - **零中间态提交、Verified-Commit 锚定与睡前排空循环（No Intermediate Claim Commits & Drain-Loop）**：Router 是唯一单消费者，**严禁在取单时为了改 `in_progress` 而执行 `git commit`（避免制造垃圾提交与触发钩子）**！Router 直接按序串联跑完 `Worker（开工前必读 LESSONS.md，在秒级内环完成代码与破壁自检并在业务 Commit Body 记录意图/根因与验证证据） → Tester 针对该业务 Commit 模拟真实用户终验（若打回则由 Router 记入 LESSONS.md 并调度 Worker 闭环修复） → Router 重读 docs/TASKS.md 核对 [Task #N] 未被 Brain 改为 superseded → 仅用精确 edit 将该 [Task #N] 更新为 Status: verified（Verified-Commit 填通过验收的业务代码 SHA）并执行 git commit --only docs/TASKS.md`；**提交后结束回合前，Router 必须再次检查 `docs/TASKS.md` 是否仍存在 `Status: pending` 任务区块**——若有则直接在当前轮次继续执行下一单，直至全文件 `pending` 清零后再休眠。
    - *注：在无需跨宿主的简单单软件项目里，Brain 与 Router 可由同一个主会话兼任（退化为三节点）；一旦拆分为跨窗口/跨宿主双环，必须显式立住 Router 身份。*
 3. **验证维度正交切分与首轮穷尽（Worker = 工程契约自检 + 手动破壁 vs. Tester = 模拟真实用户验收 & First-Pass Exhaustive）**：
    - **代码单测、手动破壁与全仓构建门禁归 Worker**：编译、类型检查、全仓单元测试、架构边界守卫（Guard Tests）、**手动破壁验证（`Broken by hand, each red`：手动破坏被测分支确认测试精准报红，杜绝恒真假测试与内部 Mock）**以及产物打包是 Worker 交卷前的**分内前置条件**。严禁把跑代码脚本、写单测或做进程/文件备份检查塞给 Tester。
@@ -70,20 +70,20 @@ Brain / Router 调度 Worker 与 Tester 时，按**读写性质与 `Scope` 耦�
   ↕
 🧠 [Brain] 制定架构契约，向 docs/TASKS.md 追加/更新 ## [Task #N] (Status: pending, Scope: ...)
    并执行 git commit --only docs/TASKS.md（若推翻未完旧单则将其标为 Status: superseded）
-  ↓  (.git/hooks/post-commit 发送 [AUTO-WAKEUP] 机器指令，2 秒内静默唤醒)
+  ↓  (.git/hooks/post-commit 仅当本次 Commit Diff 新增了 "+...Status: pending" 行时触发，杜绝 Router 自激递归)
 🧭 [Router] 无人值守战术总控与现场法官（多 Worktree 流水线调度 + 显性问题执行环自闭环 + 睡前排空 Drain-Loop）
-  ├── 按序认领 Status: pending 的 [Task #N]（标为 in_progress；若主目录正忙于验收上一单或多单 Scope 正交，则开启 .tmp/worktrees/task-<N> 并行派发）
+  ├── 按序取出一项 Status: pending 的 [Task #N]（严禁为 in_progress 单独执行 git commit；若主目录正忙于验收上一单或多单 Scope 正交，则开启 .tmp/worktrees/task-<N> 并行派发）
   ├── 派发 🔨 [Worker] 必读 LESSONS.md + 实现垂直切面 + 秒级无头内环跑通全仓单测与手动破壁验证（合入主干并销毁临时 Worktree）
   └── 唤醒 🔍 [Tester] 按产品形态模拟真实用户独立终验（操作真实产品界面/入口 + 视觉与体验首轮穷尽审视）
         ├── ✅ 全部通过 → Router 重读 TASKS.md 确认 #N 未被 superseded → 仅将 [Task #N] 更新为 Status: verified
-        │     （附 Verified-Commit）并执行 git commit --only docs/TASKS.md
-        │     └── 🔄 [Drain Check] 再次检查 TASKS.md 是否存在新追加的 Status: pending 区块？
+        │     （附 Verified-Commit）并执行 git commit --only docs/TASKS.md（因 Diff 无新增 pending，不会二次触发 Hook！）
+        │     └── 🔄 [Drain Check] 再次检查 TASKS.md 是否存在尚未执行的 Status: pending 区块？
         │           ├── 有 → 不退出回合，立即循环执行下一项 [Task #N+1]
         │           └── 无 → 队列排空，回合结束休眠
         ├── 🔧 显性实现/体验缺陷或同目标漏列支撑文件（执行环内部自愈闭环，不打扰 Brain）：
         │     ├── ① Router 比对“Worker 自检报告”与“Tester 翻车现场”，亲自将漏检模式写入/累加至 docs/LESSONS.md（Seen N×）
         │     └── ② Router 直接拍板扩权支撑文件、指出根因方向，安排 Worker 修复并补齐回归/守卫单测（满 Seen 3× 强制固化 Guard Test），重跑 Tester（上限 3 次）
-        └── ⚠️ 核心契约冲突、需求二义性或连败 3 次 → Router 将证据写回 [Task #N] (Status: blocked) 并 git commit 退回 Brain
+        └── ⚠️ 核心契约冲突、需求二义性或连败 3 次 → Router 将证据写回 [Task #N] (Status: blocked) 并 git commit --only docs/TASKS.md 退回 Brain
 ```
 
 ## 角色间通信契约（工具无关）
@@ -114,22 +114,19 @@ Brain / Router 调度 Worker 与 Tester 时，按**读写性质与 `Scope` 耦�
 - **需升级裁定项**（若为核心契约问题）：契约冲突点或架构缺陷说明
 ```
 
-### 3. 单文件滑动调度板与 `[AUTO-WAKEUP]` Git Hook 触发协议（`docs/TASKS.md`）
-为实现跨宿主、Agent 无关的全自动触发，同时**解决“Router 正在执行 `#N` 期间 Brain 又提交了 `#N+1`，导致结案时误覆盖新任务或漏触发”的并发竞态**，`docs/TASKS.md` 采用**单文件滑动任务栈（In-File Task Queue）+ 多 Worktree 流水线 + 睡前排空自检（Drain-Loop）**协议：
-- **独立区块状态（防 ABA 覆盖）**：每个任务拥有独立标题 `## [Task #N] <标题>` 与各自的状态行（`- **Status**: pending | in_progress | verified | blocked | superseded`）。Brain 追加新任务时只新增 `## [Task #N+1]`（严禁删改正在执行的 `#N`），Router 结案时仅用 `edit` 更新对应 `## [Task #N]` 下的状态行（严禁全文件盲目覆写）。
+### 3. 单文件滑动调度板与 `[AUTO-WAKEUP]` Git Hook 边沿触发协议（`docs/TASKS.md`）
+为实现跨宿主、Agent 无关的全自动触发，同时**彻底根除“多任务队列下 Router 修改 `TASKS.md` 状态时因文件内仍有其他 `pending` 任务而自己触发自己（Infinite Self-Wakeup Recursion）”的致命缺陷**，`docs/TASKS.md` 采用**Diff 边沿触发（Edge-Triggered Hook）+ 零中间态提交 + 睡前排空自检（Drain-Loop）**协议：
+- **独立区块状态（防 ABA 覆盖）**：每个任务拥有独立标题 `## [Task #N] <标题>` 与各自的状态行（`- **Status**: pending | verified | blocked | superseded`）。Brain 追加新任务时只新增 `## [Task #N+1]`（严禁删改正在执行的 `#N`），Router 结案时仅用 `edit` 更新对应 `## [Task #N]` 下的状态行（严禁全文件盲目覆写，且**严禁在取单时为 `in_progress` 单独执行 `git commit`**）。
+- **Diff 边沿触发（防 Router 自激递归）**：`.git/hooks/post-commit` 使用 `git diff-tree --no-commit-id -p HEAD -- docs/TASKS.md | grep -qE "^\+(- \*\*Status\*\*|Status): pending(\s|$)"`，**仅当本次提交的 Diff 新增行（`+`）中出现了 `Status: pending`（即 Brain 新派发了任务）时才发送唤醒指令**。当 Router 将某项任务从 `pending` 改为 `verified` 或 `blocked` 并提交时，哪怕文件下方还躺着其他未执行的 `pending` 任务，由于本次 Diff 的新增行只有 `+ - **Status**: verified/blocked` 而无 `+ ... pending`，钩子 100% 不触发，彻底斩断自激死循环！
 - **撤单语义（`Status: superseded`）**：若人类与 Brain 决定推翻正在执行或尚未执行的 `#N`，Brain 将 `[Task #N]` 状态改为 `superseded (by #N+1)` 并追加新区块 `[Task #N+1] (pending)`；Router 在结案前重读文件，若发现当前任务已变为 `superseded`，立即终止该任务验收（若在临时 Worktree 中则直接销毁该 Worktree）并转入 `#N+1`。
 - **隔离提交（`git commit --only docs/TASKS.md`）**：Brain 提交任务单时必须加 `--only docs/TASKS.md`，防止将共享工作区内 Worker 改到一半的半成品代码误打包提交。
-- **Commit Body 永久验证账本**：由于 `TASKS.md` 仅保留最近 1~2 个已结案区块，Worker 在提交业务代码时，在 Git Commit Body 中简明记录意图/根因与验证证据，确保 `TASKS.md` 滑动清理后依然可通过 `git log / git blame` 追溯。
 - **睡前排空自检（Drain-Loop，防运行中漏触发）**：即使 Router 在运行期间因会话忙而错过了新提交的外部唤醒信号，Router 在将 `#N` 标记为 `verified` 并提交后、结束回合前，**必须重新读取 `docs/TASKS.md` 检查是否仍有 `Status: pending` 区块**，若有则当场继续执行直至彻底排空。
 
 ```bash
 #!/usr/bin/env bash
-# .git/hooks/post-commit（需在本地显式安装并赋予可执行权限；冷启动或异常中断后 Router 启动时亦须扫描 TASKS.md 恢复未结案任务）
-# 读取本次已提交树对象 HEAD:docs/TASKS.md（而非可能处于半编辑态的工作区文件），唤醒失败时记录日志至 .git/router-wakeup.err
-if git diff-tree --no-commit-id --name-only -r HEAD --root | grep -qx "docs/TASKS.md"; then
-  if git show HEAD:docs/TASKS.md 2>/dev/null | grep -qE "^(- \*\*Status\*\*|Status): pending(\s|$)"; then
-    <wake-router-command> "[AUTO-WAKEUP] 你是单消费者无人值守 Execution Router（执行环战术总控与现场法官，非人类交互窗口）。请按序认领 docs/TASKS.md 中 Status: pending 的 [Task #N]（标为 in_progress；若多任务 Scope 正交或主目录正忙于 Tester 验收，可开启 .tmp/worktrees/task-<N> 并行派发 Worker 并在单测通过后变基合回主干销毁 Worktree），持续等待并串联 Worker（必读 LESSONS.md，完成秒级内环自检与手动破壁验证）与独立 Tester 闭环；若 Tester 打回显性实现/体验问题或漏列同切面支撑文件，由你直接将漏检模式写入/累加至 docs/LESSONS.md（满 Seen 3× 令 Worker 顺手固化为 Guard Test）并拍板安排 Worker 修复自愈，绝不拿显性 Bug 打扰 Brain；通过后重读确认该单未被标为 superseded，将其更新为 Status: verified（Verified-Commit 填通过验收的业务代码 SHA）并 git commit --only docs/TASKS.md；睡前再次重读排空新增 pending 区块，严禁向人类提问等待回复。" 2>>.git/router-wakeup.err || echo "[post-commit] wake-router failed, see .git/router-wakeup.err" >&2
-  fi
+# .git/hooks/post-commit（边沿触发：仅当本次 commit 在 docs/TASKS.md 的 diff 中【新增】了 Status: pending 行时才唤醒 Router，杜绝 Router 结案提交时自激递归）
+if git diff-tree --no-commit-id -p HEAD --root -- docs/TASKS.md 2>/dev/null | grep -qE "^\+(- \*\*Status\*\*|Status): pending(\s|$)"; then
+  <wake-router-command> "[AUTO-WAKEUP] 你是单消费者无人值守 Execution Router（执行环战术总控与现场法官，非人类交互窗口）。请按序读取 docs/TASKS.md 中所有 Status: pending 的 [Task #N]（严禁为 in_progress 单独执行 git commit；若多任务 Scope 正交或主目录正忙于 Tester 验收，可开启 .tmp/worktrees/task-<N> 并行派发 Worker 并在单测通过后变基合回主干销毁 Worktree），持续等待并串联 Worker（必读 LESSONS.md，完成秒级内环自检与手动破壁验证）与独立 Tester 闭环；若 Tester 打回显性实现/体验问题或漏列同切面支撑文件，由你直接将漏检模式写入/累加至 docs/LESSONS.md（满 Seen 3× 令 Worker 顺手固化为 Guard Test）并拍板安排 Worker 修复自愈，绝不拿显性 Bug 打扰 Brain；通过后重读确认该单未被标为 superseded，仅将其更新为 Status: verified（Verified-Commit 填通过验收的业务代码 SHA）并 git commit --only docs/TASKS.md；睡前再次重读排空所有剩余 pending 区块，严禁向人类提问等待回复。" 2>>.git/router-wakeup.err || echo "[post-commit] wake-router failed, see .git/router-wakeup.err" >&2
 fi
 ```
 

@@ -3,9 +3,9 @@
 <!-- 单文件滑动任务调度板协议（Agent 无关 · Git Hook 驱动 · 支持多 Worktree 并行与流水线重叠）：
      1. 两级分诊漏斗：海量外部 Issues/PR 在仓外去重聚类，仅近期确认立项执行的活跃任务写入本文件。
      2. 宏观 Brain 定稿任务后，以独立编号区块 `## [Task #<N>] <标题>` 写入本文件（标记 `- **Status**: pending` 与 `- **Scope**: <写文件/目录集>`），并执行隔离提交 `git commit --only docs/TASKS.md`（防带入后台 Worker 半成品代码）。
-     3. 若上一轮 `[Task #<N-1>]` 仍在后台执行（`Status: pending / in_progress`），Brain 直接在末尾追加 `## [Task #<N>]`，严禁覆盖或删除正在执行的区块；若需推翻未完旧单，将其改为 `- **Status**: superseded (by #<N>)` 并追加新单。
-     4. 文件内仅保留所有未结案区块（`pending / in_progress / blocked`）+ 最近 1~2 个已结案区块（`verified / superseded`）作为近期锚点，更早的已结案区块在追加新单时顺手移出（历史由 `git log` 保存）。
-     5. 仓库 .git/hooks/post-commit 检测到本次 commit 包含 docs/TASKS.md 且存在 `Status: pending` 区块时，秒级唤醒下游常驻 Router。
+     3. 若上一轮 `[Task #<N-1>]` 仍在后台执行（`Status: pending`），Brain 直接在末尾追加 `## [Task #<N>]`，严禁覆盖或删除正在执行的区块；若需推翻未完旧单，将其改为 `- **Status**: superseded (by #<N>)` 并追加新单。
+     4. 文件内仅保留所有未结案区块（`pending / blocked`）+ 最近 1~2 个已结案区块（`verified / superseded`）作为近期锚点，更早的已结案区块在追加新单时顺手移出（历史由 `git log` 保存）。
+     5. 仓库 .git/hooks/post-commit 采用 Diff 边沿触发（`git diff-tree -p HEAD -- docs/TASKS.md | grep "^\+.*Status.*: pending"`）：仅当本次 commit 【新增】了 `Status: pending` 行时才唤醒下游 Router；Router 严禁为 `in_progress` 单独提交 Git，结案提交 `verified / blocked` 时因未新增 `pending` 行，绝不会发生自激递归。
      6. 下游 Router 按 Scope 正交性与当前主目录空闲状态调度执行：
         - 单任务且主目录空闲：直接在主工作树执行；
         - 当 Tester 正在主目录耗时验收 `#<N-1>`，或存在 2~3 个 Scope 100% 物理正交的 `pending` 任务时：Router 在本仓库 `.tmp/worktrees/task-<N>/` 下创建隔离 Git Worktree（`git worktree add -B task/<N> .tmp/worktrees/task-<N> HEAD`，软链复用 `node_modules/.venv`）并行派发 Worker 开发，Worker 跑通秒级内环单测后由 Router 变基快进合回主分支（`git rebase main && git merge --ff-only`）并立即销毁该 Worktree（`git worktree remove --force`）。
