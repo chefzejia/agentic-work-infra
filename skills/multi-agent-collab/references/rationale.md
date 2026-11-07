@@ -46,13 +46,13 @@
 - **为什么既存の 4 个热角色防不住慢性屎山？**
   1. `Brain` 和 `Router` 是常驻长会话，跑上几十轮后会产生顺从偏差与历史沉没成本包袱（觉得自己批过的方案都合理）；
   2. `Worker` 和 `Tester` 每次只盯着当前这 1 个任务：只要测试绿了、界面点得通就算过。但连续叠了 3~4 个任务后，代码里可能已经悄悄长出了多层包装函数、抠源码假测试或模块越界。
-- **为什么 `Auditor` 必须是「非热驻留（Fresh-Context）」且「不需要二次审批」？**
-  1. **100% 零包袱冷启动**：当 `TASKS.md` 队列排空（`0 pending`）且距 `LESSONS.md` 首行 `reviewed-through: <sha>` 已累积 $\ge 5$ 个非文档代码提交时，由 `post-commit` 在后台自动拉起一个**全新的无状态进程**。它没有参与过之前的任何妥协，只对照 `engineering-discipline` 与 `ARCHITECTURE.md` 冷酷审视 `<reviewed-through>..HEAD` 的代码 Diff。
-  2. **用「三大实证门槛」代替臃肿的二次确认（Proof over Second-Approval）**：如果给 Auditor 再配一个审批官，就会陷入“谁来监督监督者”的官僚死循环。根治之道是**严禁 Auditor 提任何主观风格建议，规定它只有拿到以下三类可证伪的物理铁证之一时才允许往 `TASKS.md` 派清创单**：
+- **为什么 `Auditor` 必须由 `Router` 在睡前派生为「一次性全新冷子代理（Fresh Subagent）」，而不能在 Git Hook 里用 `nohup` 另起炉灶？**
+  1. **告别场外进程竞争与 CLI 脆弱性**：若在 `.git/hooks/post-commit` 里用 `nohup` 拉起场外进程，不仅容易因宿主 CLI 参数升级静默崩溃，还会与常驻 `Router` 争抢工作树与 `.git/index.lock`。由唯一单消费者 `Router` 在排空全部 `pending` 任务后、休眠前检查水位线（距 `LESSONS.md` 首行 `reviewed-through` 累积 $\ge 5$ 个非文档代码提交）并直接派生一个**全新的空白子代理 `Auditor`**（审完即关），既保证了 **100% 零历史包袱冷启动**，又保持了 `.git/hooks/post-commit` 极简 8 行的纯粹与零锁冲突！
+  2. **用「三大实证门槛」代替臃肿的二次确认（Proof over Second-Approval）**：如果给 Auditor 再配一个审批官，就会陷入“谁来监督监督者”的官僚死循环。根治之道是**严禁 Auditor 提任何主观风格建议，规定它只有拿到以下三类可证伪的物理铁证之一时才允许触发清创**：
      - **破壁不红实证**：现场注释或改反被测核心业务代码跑测试，测试竟然仍 `PASS`（100% 坐实为假单测）；
      - **反模式行号实证**：精确指出 `filepath:line` 违反了明文禁止的套娃/截胡/假测试反模式；
      - **契约背叛实证**：精确指出代码行为（或 Brain 自己写的任务单）违背了 `ARCHITECTURE.md / PRODUCT.md` 的哪一条。
-  3. **复用快车道自动闭环**：Auditor 把 `LESSONS.md` 的 `reviewed-through` 推到 `HEAD`（水位差归零，防止无限循环），并将带铁证的清创任务追加进 `docs/TASKS.md (Status: pending)`，同一秒自动触发 `post-commit` 分支 1 唤醒 `Router -> Worker -> Tester` 把屎山铲平！
+  3. **当前回合当场铲平闭环**：`Auditor` 向 `Router` 返回实证缺陷后，`Router` 无需再改 `TASKS.md` 重新触发钩子，直接在当前回合命令 `Worker` 把屎山铲平 + `Tester` 复验，最后把 `LESSONS.md` 的 `reviewed-through` 推到最新 `HEAD` 安心休眠！
 
 ## Brain 与 Router 如何避免被细节淹没、避免并发丢单？
 
