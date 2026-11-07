@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard test suite for agentic-work-infra.
+"""Guard test suite for Aperture.
 
 Checks:
 1. Root `VERSION` exists and follows strict SemVer (`X.Y.Z`).

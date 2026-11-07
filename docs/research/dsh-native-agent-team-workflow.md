@@ -12,7 +12,7 @@
 | :--- | :--- | :--- | :--- |
 | **1. 专用运行时路由派** | DeepSeek `dsh-superagent-prototype` | 独立 Runtime + SQLite 事件流 + 常驻 Router 与隔离 Worker（消融实验证明单 Session + Subagent 在中性提示下 5 次均退化为不调子代理硬干，p95 达 29.5m；双层拆分后降至 15.7m） | 偏理论原型与 IM 群聊/GitHub 多事件并发入口；个人开发本地项目时无需维护重型运行时。 |
 | **2. 社区维护三 Loop 派** | yetone `magpie`（[推文实证](https://x.com/yetone/status/2109855710444237018)） | 3 个常驻 `claude --dangerously-skip-permissions` 循环（`dev-app-loop` / `release-magpie` / `agents-status`）+ 严苛 CI + `LESSONS.md`（每晚人工复盘提取规则） | 适合**架构已定型、每日有大量社区 Issue/PR 涌入的成熟开源项目（维护态）**；个人从 0 到 1 做新产品时若无高密度 Issue 喂入，死循环易空转或过度设计。 |
-| **3. 双环四重身份 + Git Hook 事件派（本仓方案 ⭐）** | `agentic-work-infra` | **思考环（人 $\leftrightarrow$ 宏观 Brain）** + **`.git/hooks/post-commit` 监听 `TASKS.md (Status: pending)` 秒级事件唤醒** + **执行环（无人值守 Router 管理 `.tmp/worktrees/` 调度常驻 Worker 与独立 Tester，收口改回 `Status: verified`）** | 专为**独立开发者/小团队从 0 到 1 推进项目及多任务并发演进**设计：零外部编排器依赖、平时 0 Token 空转、需要时秒级多轨闭环。 |
+| **3. 双环四重身份 + Git Hook 事件派（本仓方案 ⭐）** | `aperture` | **思考环（人 $\leftrightarrow$ 宏观 Brain）** + **`.git/hooks/post-commit` 监听 `TASKS.md (Status: pending)` 秒级事件唤醒** + **执行环（无人值守 Router 管理 `.tmp/worktrees/` 调度常驻 Worker 与独立 Tester，收口改回 `Status: verified`）** | 专为**独立开发者/小团队从 0 到 1 推进项目及多任务并发演进**设计：零外部编排器依赖、平时 0 Token 空转、需要时秒级多轨闭环。 |
 
 ---
 

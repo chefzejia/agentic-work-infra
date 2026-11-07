@@ -1,6 +1,9 @@
-# Agentic Work Infra
+# Aperture
 
-本项目研究 Agent 时代人和 Agent 如何协同完成真实工作，并将经过验证的方法沉淀为**工具无关、自解释的 Skills**。
+> **Focus infinite intelligence into finite purpose.**
+> **以有限之孔径，聚无限之智能。**
+
+本项目研究 Agent 时代如何用有限的规则、边界与审美孔径（Aperture）驾驭近乎无限的硅基算力，并将经过验证的方法沉淀为**工具无关、自解释的 Skills**。
 
 ## 架构与路由
 
